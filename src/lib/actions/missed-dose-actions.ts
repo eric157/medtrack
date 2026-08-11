@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createAdminClient, isSupabaseConfigured } from '@/lib/supabase/server';
+import { createAdminClient, createClient, isSupabaseConfigured } from '@/lib/supabase/server';
 import { processMissedDoses } from '@/lib/missed-doses';
 import { sendPushToAllCaregivers } from '@/lib/actions/push-actions';
 
@@ -18,6 +18,14 @@ export async function processMissedDosesAction(
 
   if (kioskPin && !validateKioskPin(kioskPin)) {
     return { success: false, recorded: 0, names: [], error: 'Invalid kiosk PIN' };
+  }
+
+  if (!kioskPin) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return { success: false, recorded: 0, names: [], error: 'Not authenticated' };
+    }
   }
 
   const admin = createAdminClient();
