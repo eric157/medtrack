@@ -5,9 +5,6 @@ import { Medication, Patient } from '@/lib/types';
 import { calculateDepletionForecast } from '@/lib/forecasting';
 import { groupMedicationsForInventory, getSharedStock } from '@/lib/group-medications';
 import { KEEP_PURCHASE_LIST } from '@/lib/seed-data';
-import { refillAllMedsToTargetAction } from '@/lib/actions/medtrack-actions';
-import { useQueryClient } from '@tanstack/react-query';
-import { medtrackKeys } from '@/lib/queries/keys';
 import { ShoppingCart, Copy, ListOrdered } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -20,7 +17,6 @@ interface RefillPlannerModalProps {
 }
 
 export function RefillPlannerModal({ isOpen, onClose, medications, patients }: RefillPlannerModalProps) {
-  const queryClient = useQueryClient();
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -63,16 +59,6 @@ export function RefillPlannerModal({ isOpen, onClose, medications, patients }: R
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleRefillInApp = async () => {
-    const result = await refillAllMedsToTargetAction(30);
-    if (result.success) {
-      queryClient.invalidateQueries({ queryKey: medtrackKeys.all });
-      setSyncStatus('All medications updated to 30-day target stock');
-    } else {
-      setSyncStatus(result.error ?? 'Failed');
-    }
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={open => !open && onClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -82,6 +68,10 @@ export function RefillPlannerModal({ isOpen, onClose, medications, patients }: R
             Refill & Purchase Planner
           </DialogTitle>
         </DialogHeader>
+
+        <p className="text-sm text-muted-foreground">
+          Update stock per medication on the inventory cards below — use +/− or Edit to set the exact count.
+        </p>
 
         <div className="flex gap-2">
           <Button variant={activeTab === 'keepList' ? 'default' : 'outline'} size="sm" onClick={() => setActiveTab('keepList')}>
@@ -113,13 +103,16 @@ export function RefillPlannerModal({ isOpen, onClose, medications, patients }: R
           </ul>
         )}
 
-        {syncStatus && <p className="text-sm text-emerald-600 font-semibold">{syncStatus}</p>}
+        {syncStatus && (
+          <p className={`text-sm font-semibold ${syncStatus.includes('Failed') ? 'text-rose-600' : 'text-emerald-600'}`}>
+            {syncStatus}
+          </p>
+        )}
 
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={handleCopyKeepList}>
             <Copy className="w-4 h-4 mr-1" />{copied ? 'Copied!' : 'Copy List'}
           </Button>
-          <Button variant="outline" onClick={handleRefillInApp}>Refill to 30 Days</Button>
           <Button onClick={handleGoogleTasksSync} disabled={isSyncing} className="bg-amber-500 hover:bg-amber-600 text-slate-950">
             {isSyncing ? 'Syncing...' : 'Sync to Google Tasks'}
           </Button>

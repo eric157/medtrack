@@ -277,24 +277,3 @@ export async function signOutAction(): Promise<void> {
 export async function verifyKioskPinAction(pin: string): Promise<boolean> {
   return validateKioskPin(pin);
 }
-
-export async function refillAllMedsToTargetAction(targetDays = 30): Promise<{ success: boolean; error?: string }> {
-  const supabase = await getSupabaseOrFallback();
-  if (!supabase) return { success: false, error: 'Supabase not configured' };
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { success: false, error: 'Not authenticated' };
-
-  const { data: meds, error: fetchError } = await supabase.from('medications').select('*');
-  if (fetchError) return { success: false, error: fetchError.message };
-
-  for (const med of meds ?? []) {
-    const dailyConsumption = Math.max(1, med.daily_frequency * med.dosage_per_take);
-    const targetStock = targetDays * dailyConsumption;
-    const newStock = Math.max(med.current_stock, targetStock);
-    await supabase.from('medications').update({ current_stock: newStock, updated_at: new Date().toISOString() }).eq('id', med.id);
-  }
-
-  revalidatePath('/dashboard');
-  return { success: true };
-}
