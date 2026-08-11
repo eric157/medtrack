@@ -70,7 +70,7 @@ export function RefillPlannerModal({ isOpen, onClose, medications, patients }: R
         </DialogHeader>
 
         <p className="text-sm text-muted-foreground">
-          Update stock per medication on the inventory cards below — use +/− or Edit to set the exact count.
+          Update stock per medication on the inventory cards below — use +5/+10/+15/+30 pack buttons or Edit for an exact count.
         </p>
 
         <div className="flex gap-2">
