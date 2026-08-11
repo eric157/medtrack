@@ -17,12 +17,13 @@ import Link from 'next/link';
 import {
   LayoutDashboard, Plus, ShoppingCart, AlertTriangle, CheckCircle2, Package, Users, Filter,
 } from 'lucide-react';
-import { useMedtrackClock } from '@/lib/hooks/use-missed-dose-watcher';
+import { useMedtrackClock, useCaregiverMissedDoseWatcher } from '@/lib/hooks/use-missed-dose-watcher';
 import { getMedtrackTimezone, getTodayKey, hasBlockEnded, isLogOnDate } from '@/lib/time-blocks';
 import { groupMedicationsForInventory, getSharedStock } from '@/lib/group-medications';
 
 export default function CaregiverDashboardPage() {
   useMedtrackClock();
+  useCaregiverMissedDoseWatcher();
 
   const { data: patients = [], isLoading: loadingPatients } = usePatients();
   const { data: medications = [], isLoading: loadingMeds } = useMedications();

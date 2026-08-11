@@ -79,10 +79,10 @@ npm run dev
 
 - Kiosk PIN: `1234` (change via `KIOSK_PIN` in `.env.local`)
 - Push notification VAPID keys (auto-generated)
-- Cron secret for daily low-stock alerts
+- Cron secret for daily Vercel cron jobs (Hobby plan: once per day max)
 - Site URL: `https://medtrack-flame.vercel.app`
 - Timezone: `America/New_York` (change `NEXT_PUBLIC_MEDTRACK_TIMEZONE` for your region, e.g. `Asia/Kolkata`)
-- Automatic missed-dose detection when parents forget to mark taken
+- Missed-dose detection: daily Vercel cron (6 PM UTC) + live checks while Parent Kiosk or Caregiver Dashboard is open
 
 ---
 
@@ -105,4 +105,5 @@ npm run dev
 | Magic link doesn't arrive | Check spam; verify Email provider enabled in Supabase |
 | Dashboard redirects to login | Expected — sign in with magic link first |
 | Dose not syncing to dashboard | Confirm Realtime enabled; check Supabase keys on Vercel |
-| Missed doses not recording | Set `NEXT_PUBLIC_MEDTRACK_TIMEZONE` to your IANA timezone on Vercel; cron runs every 15 min |
+| Missed doses not recording | Set `NEXT_PUBLIC_MEDTRACK_TIMEZONE` on Vercel; keep kiosk or dashboard open for live checks; daily cron runs at 18:00 UTC |
+| Vercel deploy fails on cron | Hobby plan allows **once-per-day** crons only — do not use `*/15` schedules in `vercel.json` |

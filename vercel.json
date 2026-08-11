@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/cron/missed-doses",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 18 * * *"
     }
   ]
 }

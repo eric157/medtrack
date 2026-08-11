@@ -14,7 +14,7 @@ export function useClockTick(intervalMs = 60_000) {
   }, [intervalMs]);
 }
 
-/** Record missed doses while kiosk is open. */
+/** Record missed doses while kiosk is open (every 2 min). */
 export function useMissedDoseWatcher() {
   useClockTick(60_000);
 
@@ -26,6 +26,18 @@ export function useMissedDoseWatcher() {
 
     run();
     const id = setInterval(run, 2 * 60_000);
+    return () => clearInterval(id);
+  }, []);
+}
+
+/** Record missed doses while caregiver dashboard is open (every 5 min). */
+export function useCaregiverMissedDoseWatcher() {
+  useClockTick(60_000);
+
+  useEffect(() => {
+    const run = () => processMissedDosesAction();
+    run();
+    const id = setInterval(run, 5 * 60_000);
     return () => clearInterval(id);
   }, []);
 }
