@@ -1,12 +1,17 @@
 import React from 'react';
 import Link from 'next/link';
 import { HeartHandshake, LayoutDashboard, ShieldCheck, Zap, Bell, CheckCircle2 } from 'lucide-react';
+import { InstallGuide } from '@/components/InstallGuide';
+import { Logo } from '@/components/Logo';
 
 export default function Home() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-12">
       {/* Hero Section */}
       <div className="text-center space-y-4 mb-12">
+        <div className="flex justify-center mb-2">
+          <Logo size="lg" showWordmark={false} />
+        </div>
         <div className="inline-flex items-center space-x-2 px-3 py-1 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-sm font-semibold rounded-full border border-emerald-300 dark:border-emerald-700">
           <Zap className="w-4 h-4 text-emerald-600" />
           <span>Real-time Medication Sync & Inventory Engine</span>
@@ -128,6 +133,8 @@ export default function Home() {
           </p>
         </div>
       </div>
+
+      <InstallGuide />
     </div>
   );
 }
