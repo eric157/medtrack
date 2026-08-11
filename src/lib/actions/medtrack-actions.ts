@@ -8,6 +8,7 @@ import { getSiteUrl } from '@/lib/site-url';
 import { getMedtrackTimezone, getTodayKey, isLogOnDate } from '@/lib/time-blocks';
 import type { Medication, Patient, DoseLog, TimeOfDay } from '@/lib/types';
 import { SEED_PATIENTS, SEED_MEDICATIONS } from '@/lib/seed-data';
+import { dedupeMedications } from '@/lib/dedupe-medications';
 
 async function getSupabaseOrFallback() {
   if (!isSupabaseConfigured()) return null;
@@ -29,7 +30,8 @@ export async function fetchMedications(): Promise<Medication[]> {
 
   const { data, error } = await supabase.from('medications').select('*').order('name');
   if (error) throw error;
-  return (data ?? []).map(m => ({ ...m, is_active: m.is_active ?? true }));
+  const meds = (data ?? []).map(m => ({ ...m, is_active: m.is_active ?? true }));
+  return dedupeMedications(meds);
 }
 
 export async function fetchDoseLogs(limit = 100): Promise<DoseLog[]> {
@@ -178,8 +180,20 @@ export async function upsertMedicationAction(
 
   const payload = { ...medication, updated_at: new Date().toISOString() };
 
-  const { error } = medication.id
-    ? await supabase.from('medications').update(payload).eq('id', medication.id)
+  let targetId = medication.id;
+  if (!targetId) {
+    const { data: existing } = await supabase
+      .from('medications')
+      .select('id')
+      .eq('patient_id', medication.patient_id)
+      .eq('name', medication.name)
+      .eq('time_of_day', medication.time_of_day)
+      .maybeSingle();
+    targetId = existing?.id;
+  }
+
+  const { error } = targetId
+    ? await supabase.from('medications').update(payload).eq('id', targetId)
     : await supabase.from('medications').insert(payload);
 
   if (error) return { success: false, error: error.message };

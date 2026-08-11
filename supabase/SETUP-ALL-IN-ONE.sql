@@ -160,4 +160,17 @@ INSERT INTO medications (patient_id, name, dosage_per_take, time_of_day, current
   ('22222222-2222-2222-2222-222222222222', 'Telma AM', 1, 'morning', 33, 30, 1, 5),
   ('22222222-2222-2222-2222-222222222222', 'Metfine XL 50', 1, 'morning', 12, 30, 1, 5);
 
+-- 7. DEDUPE + prevent future duplicates (safe to re-run)
+WITH ranked AS (
+  SELECT id, ROW_NUMBER() OVER (
+    PARTITION BY patient_id, name, time_of_day
+    ORDER BY updated_at DESC NULLS LAST, id
+  ) AS rn
+  FROM medications
+)
+DELETE FROM medications WHERE id IN (SELECT id FROM ranked WHERE rn > 1);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_medications_patient_name_slot
+  ON medications (patient_id, name, time_of_day);
+
 -- Done! Enable Email auth in: Authentication → Providers → Email

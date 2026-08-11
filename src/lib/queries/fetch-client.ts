@@ -1,6 +1,7 @@
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import type { Medication, Patient, DoseLog, TimeOfDay } from '@/lib/types';
 import { SEED_MEDICATIONS, SEED_PATIENTS } from '@/lib/seed-data';
+import { dedupeMedications } from '@/lib/dedupe-medications';
 
 /** Client-side reads — uses NEXT_PUBLIC_* keys directly (works reliably in local dev) */
 export async function fetchPatientsClient(): Promise<Patient[]> {
@@ -26,7 +27,8 @@ export async function fetchMedicationsClient(): Promise<Medication[]> {
     console.error('fetchMedicationsClient:', error.message);
     throw new Error(error.message);
   }
-  return (data ?? []).map(m => ({ ...m, is_active: m.is_active ?? true }));
+  const meds = (data ?? []).map(m => ({ ...m, is_active: m.is_active ?? true }));
+  return dedupeMedications(meds);
 }
 
 export async function fetchDoseLogsClient(limit = 200): Promise<DoseLog[]> {

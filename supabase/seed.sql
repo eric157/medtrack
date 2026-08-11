@@ -6,6 +6,12 @@ INSERT INTO patients (id, name) VALUES
   ('22222222-2222-2222-2222-222222222222', 'Mother')
 ON CONFLICT (id) DO NOTHING;
 
+-- Clear seed medications before insert (safe to re-run)
+DELETE FROM medications WHERE patient_id IN (
+  '11111111-1111-1111-1111-111111111111',
+  '22222222-2222-2222-2222-222222222222'
+);
+
 -- Insert Real Medications & Stock for Father
 INSERT INTO medications (patient_id, name, dosage_per_take, time_of_day, current_stock, pack_size, daily_frequency, low_stock_threshold_days) VALUES
   -- Father - Morning
