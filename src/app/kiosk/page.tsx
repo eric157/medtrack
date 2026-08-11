@@ -7,8 +7,20 @@ import { usePatients, useMedications, useDoseLogs } from '@/lib/queries/use-medt
 import { TimeBlockSection } from '@/components/kiosk/TimeBlockSection';
 import { KioskPinGate } from '@/components/auth/KioskPinGate';
 import { User, ShieldCheck } from 'lucide-react';
+import { useMissedDoseWatcher, useMedtrackClock } from '@/lib/hooks/use-missed-dose-watcher';
+import {
+  TIME_BLOCK_ORDER,
+  getCurrentTimeBlock,
+  getTodayKey,
+  getMedtrackTimezone,
+  hasBlockEnded,
+  isLogOnDate,
+} from '@/lib/time-blocks';
 
 export default function ParentKioskPage() {
+  useMissedDoseWatcher();
+  useMedtrackClock();
+
   const { data: patients = [], isLoading: loadingPatients, isError: patientsError, error: patientsErr } = usePatients();
   const { data: medications = [], isLoading: loadingMeds, isError: medsError, error: medsErr } = useMedications();
   const { data: doseLogs = [] } = useDoseLogs();
@@ -52,11 +64,20 @@ export default function ParentKioskPage() {
   }
 
   const patientMeds = medications.filter(m => m.patient_id === activePatient.id && m.is_active);
-  const todayStr = new Date().toISOString().split('T')[0];
+  const timeZone = getMedtrackTimezone();
+  const now = new Date();
+  const todayKey = getTodayKey(now, timeZone);
+  const currentBlock = getCurrentTimeBlock(now, timeZone);
+
   const todayLogs = doseLogs.filter(
-    log => log.patient_id === activePatient.id && log.logged_at.startsWith(todayStr)
+    log => log.patient_id === activePatient.id && isLogOnDate(log, todayKey, timeZone),
   );
   const takenCount = todayLogs.filter(l => l.status === 'taken').length;
+  const missedCount = todayLogs.filter(l => l.status === 'missed').length
+    + patientMeds.filter(med => {
+      const log = todayLogs.find(l => l.medication_id === med.id);
+      return !log && hasBlockEnded(med.time_of_day, now, timeZone);
+    }).length;
   const totalScheduled = patientMeds.length;
   const percentComplete = totalScheduled > 0 ? Math.round((takenCount / totalScheduled) * 100) : 0;
 
@@ -109,6 +130,11 @@ export default function ParentKioskPage() {
                 {takenCount} of {totalScheduled} Taken ({percentComplete}%)
               </span>
             </div>
+            {missedCount > 0 && (
+              <p className="text-sm font-bold text-rose-600 dark:text-rose-400">
+                {missedCount} dose{missedCount > 1 ? 's' : ''} missed today — caregiver has been notified.
+              </p>
+            )}
             <div className="w-full h-6 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden p-1 border border-slate-300 dark:border-slate-700">
               <div
                 className="h-full bg-gradient-to-r from-amber-500 via-emerald-500 to-teal-500 rounded-full transition-all duration-500"
@@ -118,10 +144,15 @@ export default function ParentKioskPage() {
           </div>
 
           <div className="space-y-8">
-            <TimeBlockSection timeBlock="morning" medications={patientMeds.filter(m => m.time_of_day === 'morning')} />
-            <TimeBlockSection timeBlock="afternoon" medications={patientMeds.filter(m => m.time_of_day === 'afternoon')} />
-            <TimeBlockSection timeBlock="evening" medications={patientMeds.filter(m => m.time_of_day === 'evening')} />
-            <TimeBlockSection timeBlock="night" medications={patientMeds.filter(m => m.time_of_day === 'night')} />
+            {TIME_BLOCK_ORDER.map(block => (
+              <TimeBlockSection
+                key={block}
+                timeBlock={block}
+                medications={patientMeds.filter(m => m.time_of_day === block)}
+                isActive={currentBlock === block}
+                isPast={hasBlockEnded(block, now, timeZone) && currentBlock !== block}
+              />
+            ))}
           </div>
 
           <div className="flex items-center justify-end pt-6 border-t border-slate-300 dark:border-slate-800 text-sm text-slate-500">

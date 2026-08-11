@@ -25,7 +25,7 @@ export interface DoseLog {
   medication_id: string;
   patient_id: string;
   scheduled_time_of_day: TimeOfDay;
-  status: 'taken' | 'skipped';
+  status: 'taken' | 'skipped' | 'missed';
   logged_at: string;
   medication_name?: string;
   patient_name?: string;

@@ -49,7 +49,7 @@ export async function fetchDoseLogsClient(limit = 200): Promise<DoseLog[]> {
     medication_id: row.medication_id as string,
     patient_id: row.patient_id as string,
     scheduled_time_of_day: row.scheduled_time_of_day as TimeOfDay,
-    status: row.status as 'taken' | 'skipped',
+    status: row.status as 'taken' | 'skipped' | 'missed',
     logged_at: row.logged_at as string,
     medication_name: (row.medications as { name?: string } | null)?.name,
     patient_name: (row.patients as { name?: string } | null)?.name,

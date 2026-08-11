@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient, createAdminClient, isSupabaseConfigured } from '@/lib/supabase/server';
 import { sendPushToAllCaregivers } from '@/lib/actions/push-actions';
 import { getSiteUrl } from '@/lib/site-url';
+import { getMedtrackTimezone, getTodayKey, isLogOnDate } from '@/lib/time-blocks';
 import type { Medication, Patient, DoseLog, TimeOfDay } from '@/lib/types';
 import { SEED_PATIENTS, SEED_MEDICATIONS } from '@/lib/seed-data';
 
@@ -87,26 +88,56 @@ export async function logDoseAction(
 
   const { data: med } = await supabase
     .from('medications')
-    .select('patient_id, time_of_day')
+    .select('patient_id, time_of_day, dosage_per_take, current_stock, name')
     .eq('id', medicationId)
     .single();
 
   if (!med) return { success: false, error: 'Medication not found' };
 
-  const { error } = await supabase.from('dose_logs').insert({
-    medication_id: medicationId,
-    patient_id: med.patient_id,
-    scheduled_time_of_day: med.time_of_day,
-    status,
-  });
+  const timeZone = getMedtrackTimezone();
+  const todayKey = getTodayKey(new Date(), timeZone);
+  const { data: recentLogs } = await supabase
+    .from('dose_logs')
+    .select('id, status, logged_at')
+    .eq('medication_id', medicationId)
+    .gte('logged_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString());
 
-  if (error) return { success: false, error: error.message };
+  const existingToday = (recentLogs ?? []).find(
+    log => isLogOnDate({ logged_at: log.logged_at as string }, todayKey, timeZone),
+  );
+
+  if (existingToday?.status === 'taken') {
+    return { success: false, error: 'Dose already marked taken today' };
+  }
+
+  if (existingToday && status === 'taken') {
+    const { error: updateError } = await supabase
+      .from('dose_logs')
+      .update({ status: 'taken', logged_at: new Date().toISOString() })
+      .eq('id', existingToday.id);
+
+    if (updateError) return { success: false, error: updateError.message };
+
+    const newStock = Math.max(0, med.current_stock - med.dosage_per_take);
+    await supabase
+      .from('medications')
+      .update({ current_stock: newStock, updated_at: new Date().toISOString() })
+      .eq('id', medicationId);
+  } else {
+    const { error } = await supabase.from('dose_logs').insert({
+      medication_id: medicationId,
+      patient_id: med.patient_id,
+      scheduled_time_of_day: med.time_of_day,
+      status,
+    });
+
+    if (error) return { success: false, error: error.message };
+  }
 
   if (status === 'taken') {
-    const { data: medInfo } = await supabase.from('medications').select('name').eq('id', medicationId).single();
     await sendPushToAllCaregivers(
       '✅ Dose Logged',
-      `${medInfo?.name ?? 'Medication'} marked taken via Parent Kiosk`,
+      `${med.name ?? 'Medication'} marked taken via Parent Kiosk`,
       '/dashboard'
     );
   }

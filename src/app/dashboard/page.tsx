@@ -17,8 +17,12 @@ import Link from 'next/link';
 import {
   LayoutDashboard, Plus, ShoppingCart, AlertTriangle, CheckCircle2, Package, Users, Filter,
 } from 'lucide-react';
+import { useMedtrackClock } from '@/lib/hooks/use-missed-dose-watcher';
+import { getMedtrackTimezone, getTodayKey, hasBlockEnded, isLogOnDate } from '@/lib/time-blocks';
 
 export default function CaregiverDashboardPage() {
+  useMedtrackClock();
+
   const { data: patients = [], isLoading: loadingPatients } = usePatients();
   const { data: medications = [], isLoading: loadingMeds } = useMedications();
   const { data: doseLogs = [] } = useDoseLogs();
@@ -47,9 +51,17 @@ export default function CaregiverDashboardPage() {
     return calculateDepletionForecast(med, patient?.name ?? '').isLowStock;
   });
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  const todayLogs = doseLogs.filter(log => log.logged_at.startsWith(todayStr));
+  const timeZone = getMedtrackTimezone();
+  const now = new Date();
+  const todayKey = getTodayKey(now, timeZone);
+  const todayLogs = doseLogs.filter(log => isLogOnDate(log, todayKey, timeZone));
   const dosesTakenToday = todayLogs.filter(l => l.status === 'taken').length;
+  const dosesMissedToday = todayLogs.filter(l => l.status === 'missed').length
+    + medications.filter(med => {
+      if (!med.is_active) return false;
+      const log = todayLogs.find(l => l.medication_id === med.id);
+      return !log && hasBlockEnded(med.time_of_day, now, timeZone);
+    }).length;
   const totalDailyScheduled = medications.filter(m => m.is_active).length;
   const compliancePercent = totalDailyScheduled > 0
     ? Math.min(100, Math.round((dosesTakenToday / totalDailyScheduled) * 100))
@@ -115,6 +127,9 @@ export default function CaregiverDashboardPage() {
             <div>
               <p className="text-xs font-extrabold text-slate-500 uppercase">Doses Today</p>
               <h3 className="text-3xl font-black text-emerald-600 mt-1">{dosesTakenToday}</h3>
+              {dosesMissedToday > 0 && (
+                <p className="text-xs font-bold text-rose-600 mt-1">{dosesMissedToday} missed</p>
+              )}
             </div>
             <CheckCircle2 className="w-7 h-7 text-emerald-500" />
           </div>

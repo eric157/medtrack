@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/low-stock",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/missed-doses",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

@@ -81,6 +81,8 @@ npm run dev
 - Push notification VAPID keys (auto-generated)
 - Cron secret for daily low-stock alerts
 - Site URL: `https://medtrack-flame.vercel.app`
+- Timezone: `America/New_York` (change `NEXT_PUBLIC_MEDTRACK_TIMEZONE` for your region, e.g. `Asia/Kolkata`)
+- Automatic missed-dose detection when parents forget to mark taken
 
 ---
 
@@ -103,3 +105,4 @@ npm run dev
 | Magic link doesn't arrive | Check spam; verify Email provider enabled in Supabase |
 | Dashboard redirects to login | Expected — sign in with magic link first |
 | Dose not syncing to dashboard | Confirm Realtime enabled; check Supabase keys on Vercel |
+| Missed doses not recording | Set `NEXT_PUBLIC_MEDTRACK_TIMEZONE` to your IANA timezone on Vercel; cron runs every 15 min |

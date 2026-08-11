@@ -36,6 +36,7 @@ SUPABASE_SERVICE_ROLE_KEY=PASTE_YOUR_SERVICE_ROLE_KEY_HERE
 
 # --- Auto-generated (safe to keep) ---
 NEXT_PUBLIC_SITE_URL=https://medtrack-flame.vercel.app
+NEXT_PUBLIC_MEDTRACK_TIMEZONE=America/New_York
 KIOSK_PIN=1234
 CRON_SECRET=${cronSecret}
 NEXT_PUBLIC_VAPID_PUBLIC_KEY=${vapid.publicKey}

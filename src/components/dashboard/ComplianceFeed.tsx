@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { DoseLog } from '@/lib/types';
-import { CheckCircle2, XCircle, Clock, Activity, RefreshCw } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, Activity, AlertTriangle } from 'lucide-react';
 
 interface ComplianceFeedProps {
   doseLogs: DoseLog[];
@@ -49,6 +49,7 @@ export function ComplianceFeed({ doseLogs }: ComplianceFeedProps) {
           const dateFormatted = logDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
 
           const isTaken = log.status === 'taken';
+          const isMissed = log.status === 'missed';
 
           return (
             <div
@@ -56,12 +57,16 @@ export function ComplianceFeed({ doseLogs }: ComplianceFeedProps) {
               className={`p-4 rounded-2xl border flex items-center justify-between transition-all ${
                 isTaken
                   ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/40'
-                  : 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/40'
+                  : isMissed
+                    ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40'
+                    : 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/40'
               }`}
             >
               <div className="flex items-center space-x-3.5">
                 {isTaken ? (
                   <CheckCircle2 className="w-7 h-7 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                ) : isMissed ? (
+                  <AlertTriangle className="w-7 h-7 text-amber-600 dark:text-amber-400 shrink-0" />
                 ) : (
                   <XCircle className="w-7 h-7 text-rose-600 dark:text-rose-400 shrink-0" />
                 )}
@@ -77,7 +82,16 @@ export function ComplianceFeed({ doseLogs }: ComplianceFeedProps) {
                   </div>
 
                   <p className="text-xs text-slate-500 capitalize">
-                    {log.scheduled_time_of_day} Dose &bull; Status: <strong className={isTaken ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'}>{log.status.toUpperCase()}</strong>
+                    {log.scheduled_time_of_day} Dose &bull; Status:{' '}
+                    <strong className={
+                      isTaken
+                        ? 'text-emerald-700 dark:text-emerald-300'
+                        : isMissed
+                          ? 'text-amber-700 dark:text-amber-300'
+                          : 'text-rose-700 dark:text-rose-300'
+                    }>
+                      {log.status.toUpperCase()}
+                    </strong>
                   </p>
                 </div>
               </div>
