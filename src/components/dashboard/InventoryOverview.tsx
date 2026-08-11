@@ -9,8 +9,10 @@ import {
   formatMedicationSchedule,
 } from '@/lib/group-medications';
 import { useUpdateStock, useDeleteMedication } from '@/lib/queries/use-medtrack';
-import { Package, AlertTriangle, Plus, Minus, Edit3, Trash2 } from 'lucide-react';
+import { Package, AlertTriangle, Edit3, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+
+const PACK_INCREMENTS = [5, 10, 15, 30] as const;
 
 interface InventoryOverviewProps {
   medications: Medication[];
@@ -77,12 +79,38 @@ export function InventoryOverview({ medications, patients, onEditMedication }: I
                 <p className="text-[10px] text-muted-foreground">Depletion: {forecast.depletionDate}</p>
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-1">
-                  <Button variant="outline" size="icon" onClick={() => handleStockChange(group.primary.id, stock, -1)}><Minus className="w-4 h-4" /></Button>
-                  <Button variant="outline" size="icon" onClick={() => handleStockChange(group.primary.id, stock, 1)}><Plus className="w-4 h-4" /></Button>
+              <div className="flex items-center justify-between gap-2">
+                <div className="space-y-1.5">
+                  <div className="flex flex-wrap gap-1">
+                    {PACK_INCREMENTS.map(amount => (
+                      <Button
+                        key={`minus-${amount}`}
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs font-bold min-w-[2.5rem]"
+                        disabled={updateStock.isPending}
+                        onClick={() => handleStockChange(group.primary.id, stock, -amount)}
+                      >
+                        −{amount}
+                      </Button>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {PACK_INCREMENTS.map(amount => (
+                      <Button
+                        key={`plus-${amount}`}
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs font-bold min-w-[2.5rem] text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                        disabled={updateStock.isPending}
+                        onClick={() => handleStockChange(group.primary.id, stock, amount)}
+                      >
+                        +{amount}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex items-center space-x-1">
+                <div className="flex items-center space-x-1 shrink-0">
                   <Button variant="ghost" size="icon" onClick={() => onEditMedication(group.primary)}><Edit3 className="w-4 h-4" /></Button>
                   <Button variant="ghost" size="icon" onClick={() => handleDeleteGroup(group.entries)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
                 </div>
