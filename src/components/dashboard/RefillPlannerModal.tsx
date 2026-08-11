@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Medication, Patient } from '@/lib/types';
 import { calculateDepletionForecast } from '@/lib/forecasting';
+import { groupMedicationsForInventory, getSharedStock } from '@/lib/group-medications';
 import { KEEP_PURCHASE_LIST } from '@/lib/seed-data';
 import { refillAllMedsToTargetAction } from '@/lib/actions/medtrack-actions';
 import { useQueryClient } from '@tanstack/react-query';
@@ -25,8 +26,12 @@ export function RefillPlannerModal({ isOpen, onClose, medications, patients }: R
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'keepList' | 'calculated30d'>('keepList');
 
-  const refillList = medications
-    .map(med => calculateDepletionForecast(med, patients.find(p => p.id === med.patient_id)?.name ?? 'Unknown', 30))
+  const refillList = groupMedicationsForInventory(medications.filter(m => m.is_active))
+    .map(group => {
+      const patientName = patients.find(p => p.id === group.patient_id)?.name ?? 'Unknown';
+      const stock = getSharedStock(group.entries);
+      return calculateDepletionForecast({ ...group.primary, current_stock: stock }, patientName, 30);
+    })
     .filter(item => item.refillQuantityNeeded > 0);
 
   const handleGoogleTasksSync = async () => {
