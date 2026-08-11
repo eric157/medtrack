@@ -1,25 +1,46 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none">
   <defs>
-    <linearGradient id="bg" x1="64" y1="48" x2="448" y2="464" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#10B981"/>
-      <stop stop-color="#0D9488"/>
-      <stop offset="1" stop-color="#047857"/>
+    <linearGradient id="bg" x1="96" y1="32" x2="416" y2="480" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5EEAD4"/>
+      <stop offset="0.35" stop-color="#14B8A6"/>
+      <stop offset="1" stop-color="#065F46"/>
     </linearGradient>
-    <linearGradient id="pill" x1="144" y1="256" x2="368" y2="256" gradientUnits="userSpaceOnUse">
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(200 140) rotate(90) scale(180 220)">
+      <stop stop-color="#FFFFFF" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="pill-body" x1="160" y1="256" x2="352" y2="256" gradientUnits="userSpaceOnUse">
       <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#F0FDFA"/>
+    </linearGradient>
+    <linearGradient id="pill-taken" x1="160" y1="256" x2="256" y2="256" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#99F6E4"/>
       <stop offset="1" stop-color="#ECFDF5"/>
     </linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#064E3B" flood-opacity="0.35"/>
+    <filter id="pill-shadow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#042F2E" flood-opacity="0.35"/>
     </filter>
+    <filter id="badge-shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#042F2E" flood-opacity="0.25"/>
+    </filter>
+    <clipPath id="pill-left-clip">
+      <rect x="136" y="200" width="120" height="112"/>
+    </clipPath>
   </defs>
-  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
-  <g filter="url(#shadow)">
-    <rect x="128" y="208" width="256" height="96" rx="48" fill="url(#pill)"/>
-    <rect x="248" y="208" width="16" height="96" fill="#D1FAE5"/>
+
+  <rect width="512" height="512" rx="118" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="118" fill="url(#glow)"/>
+
+  <g filter="url(#pill-shadow)" transform="translate(256 256) rotate(-10) translate(-256 -256)">
+    <rect x="136" y="200" width="240" height="112" rx="56" fill="url(#pill-body)"/>
+    <rect x="136" y="200" width="240" height="112" rx="56" fill="url(#pill-taken)" clip-path="url(#pill-left-clip)"/>
+    <rect x="136" y="200" width="240" height="112" rx="56" stroke="#FFFFFF" stroke-width="7" fill="none"/>
+    <line x1="256" y1="212" x2="256" y2="300" stroke="#5EEAD4" stroke-width="4" stroke-linecap="round" opacity="0.8"/>
+    <path d="M176 256L206 286L240 226" stroke="#0F766E" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
-  <path d="M196 256L228 288L316 200" stroke="#059669" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M96 340H416" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" opacity="0.25"/>
-  <circle cx="384" cy="128" r="36" fill="#F59E0B"/>
-  <circle cx="384" cy="128" r="18" fill="#FDE68A"/>
+
+  <g filter="url(#badge-shadow)">
+    <circle cx="372" cy="360" r="54" fill="#FFFFFF"/>
+    <path d="M346 360L364 378L398 342" stroke="#0D9488" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
 </svg>
