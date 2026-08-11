@@ -31,13 +31,14 @@ export default function SetupPage() {
       fix: 'Run npm run setup — auto-generated',
     },
     {
-      name: 'Google Tasks (optional)',
+      name: 'Google Tasks',
       ok: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
-      fix: 'Optional — see SETUP.md Step "Google Tasks"',
+      optional: true,
+      fix: 'Optional — enables refill sync to Google Tasks from the dashboard',
     },
   ];
 
-  const allRequired = checks.slice(0, 5).every(c => c.ok);
+  const allRequired = checks.filter(c => !c.optional).every(c => c.ok);
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-12 space-y-8">
@@ -54,21 +55,46 @@ export default function SetupPage() {
       </div>
 
       <div className="space-y-3">
-        {checks.map(check => (
-          <Card key={check.name} className={check.ok ? 'border-emerald-300' : 'border-amber-300'}>
-            <CardHeader className="py-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">{check.name}</CardTitle>
-                <Badge variant={check.ok ? 'default' : 'destructive'}>
-                  {check.ok ? 'OK' : 'Missing'}
-                </Badge>
-              </div>
-              {!check.ok && (
-                <CardDescription className="text-sm">{check.fix}</CardDescription>
-              )}
-            </CardHeader>
-          </Card>
-        ))}
+        {checks.map(check => {
+          const status = check.ok
+            ? 'OK'
+            : check.optional
+              ? 'Optional'
+              : 'Missing';
+          const badgeVariant = check.ok
+            ? 'default'
+            : check.optional
+              ? 'secondary'
+              : 'destructive';
+
+          return (
+            <Card
+              key={check.name}
+              className={
+                check.ok
+                  ? 'border-emerald-300'
+                  : check.optional
+                    ? 'border-slate-200'
+                    : 'border-amber-300'
+              }
+            >
+              <CardHeader className="py-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">
+                    {check.name}
+                    {check.optional && !check.ok && (
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">(optional)</span>
+                    )}
+                  </CardTitle>
+                  <Badge variant={badgeVariant}>{status}</Badge>
+                </div>
+                {!check.ok && (
+                  <CardDescription className="text-sm">{check.fix}</CardDescription>
+                )}
+              </CardHeader>
+            </Card>
+          );
+        })}
       </div>
 
       <Card>

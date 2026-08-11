@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createClient, createAdminClient, isSupabaseConfigured } from '@/lib/supabase/server';
+import { getSiteUrl } from '@/lib/site-url';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const siteUrl = getSiteUrl();
 
   if (!code) {
     return NextResponse.redirect(`${siteUrl}/dashboard?google=error`);

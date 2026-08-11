@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createClient, createAdminClient, isSupabaseConfigured } from '@/lib/supabase/server';
 import { sendPushToAllCaregivers } from '@/lib/actions/push-actions';
+import { getSiteUrl } from '@/lib/site-url';
 import type { Medication, Patient, DoseLog, TimeOfDay } from '@/lib/types';
 import { SEED_PATIENTS, SEED_MEDICATIONS } from '@/lib/seed-data';
 
@@ -174,7 +175,7 @@ export async function signInWithMagicLink(email: string): Promise<{ success: boo
   const supabase = await getSupabaseOrFallback();
   if (!supabase) return { success: false, error: 'Supabase not configured' };
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const siteUrl = getSiteUrl();
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: { emailRedirectTo: `${siteUrl}/auth/callback` },

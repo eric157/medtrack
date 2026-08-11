@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { signInWithMagicLink } from '@/lib/actions/medtrack-actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Mail, Loader2, CheckCircle2 } from 'lucide-react';
 
 export function LoginForm() {
+  const searchParams = useSearchParams();
+  const authError = searchParams.get('error') === 'auth';
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -62,6 +65,11 @@ export function LoginForm() {
               autoComplete="email"
             />
           </div>
+          {authError && (
+            <p className="text-sm text-destructive">
+              Sign-in link expired or could not be verified. Request a new magic link and open it in the same browser.
+            </p>
+          )}
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? (

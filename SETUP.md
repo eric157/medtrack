@@ -22,11 +22,13 @@ Everything except Supabase account creation is automated. Follow these 5 steps.
 
 Then enable login:
 - **Authentication** → **Providers** → **Email** → turn **Enable Email provider** ON
-- **Authentication** → **URL Configuration** → add redirect URL:
-  ```
-  https://medtrack-flame.vercel.app/auth/callback
-  http://localhost:3000/auth/callback
-  ```
+- **Authentication** → **URL Configuration**:
+  - **Site URL:** `https://medtrack-flame.vercel.app` (not localhost — or magic links go to localhost)
+  - **Redirect URLs** (add both):
+    ```
+    https://medtrack-flame.vercel.app/auth/callback
+    http://localhost:3000/auth/callback
+    ```
 
 ---
 
@@ -97,6 +99,7 @@ npm run dev
 | Problem | Fix |
 |---------|-----|
 | Kiosk shows "Supabase not configured" | Fill in the 3 Supabase keys in `.env.local` |
+| Magic link goes to localhost | Supabase **Site URL** → set to `https://medtrack-flame.vercel.app`; add `NEXT_PUBLIC_SITE_URL` on Vercel; request a **new** magic link |
 | Magic link doesn't arrive | Check spam; verify Email provider enabled in Supabase |
 | Dashboard redirects to login | Expected — sign in with magic link first |
 | Dose not syncing to dashboard | Confirm Realtime enabled; check Supabase keys on Vercel |

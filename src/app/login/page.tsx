@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { Logo } from '@/components/Logo';
 import Link from 'next/link';
@@ -8,7 +9,9 @@ export default function LoginPage() {
       <Link href="/">
         <Logo size="lg" />
       </Link>
-      <LoginForm />
+      <Suspense fallback={<div className="text-muted-foreground">Loading...</div>}>
+        <LoginForm />
+      </Suspense>
       <p className="text-sm text-muted-foreground">
         Parent kiosk does not require login.{' '}
         <Link href="/kiosk" className="text-emerald-600 hover:underline font-semibold">

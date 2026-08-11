@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
+import { getSiteUrl } from '@/lib/site-url';
 
 export async function GET(request: Request) {
   const clientId = process.env.GOOGLE_CLIENT_ID;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const siteUrl = getSiteUrl();
   const redirectUri = `${siteUrl}/api/auth/google/callback`;
 
   if (!clientId) {
