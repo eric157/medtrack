@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Navigation } from '@/components/Navigation';
 import { InstallPrompt } from '@/components/InstallPrompt';
+import { QueryProvider } from '@/components/providers/QueryProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -24,11 +25,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="h-full">
       <head>
@@ -36,37 +33,23 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
       <body className={`${inter.className} min-h-full flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100`}>
-        <Navigation />
-        <main className="flex-1">
-          {children}
-        </main>
-        <InstallPrompt />
-        <footer className="py-6 text-center text-xs text-slate-400 border-t border-slate-200 dark:border-slate-800 space-y-1">
-          <p>MedTrack PWA &copy; {new Date().getFullYear()} &bull; Accessible Smart Family Healthcare</p>
+        <QueryProvider>
+          <Navigation />
+          <main className="flex-1">{children}</main>
+          <InstallPrompt />
+          <footer className="py-6 text-center text-xs text-slate-400 border-t border-slate-200 dark:border-slate-800 space-y-1">
+            <p>MedTrack PWA &copy; {new Date().getFullYear()} &bull; Accessible Smart Family Healthcare</p>
           <p>
             <a href="/#install" className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 transition-colors">
               Install on your device
             </a>
+            {' · '}
+            <a href="/setup" className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 transition-colors">
+              Setup status
+            </a>
           </p>
-        </footer>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js').then(
-                    function(registration) {
-                      console.log('MedTrack SW registered with scope: ', registration.scope);
-                    },
-                    function(err) {
-                      console.log('MedTrack SW registration failed: ', err);
-                    }
-                  );
-                });
-              }
-            `,
-          }}
-        />
+          </footer>
+        </QueryProvider>
       </body>
     </html>
   );

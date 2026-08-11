@@ -107,7 +107,7 @@ export function TimeBlockSection({ timeBlock, medications }: TimeBlockSectionPro
       {/* Medication Cards List */}
       <div className="space-y-4">
         {medications.map(med => (
-          <MedicationCard key={med.id} medication={med} timeOfDay={timeBlock} />
+          <MedicationCard key={med.id} medication={med} />
         ))}
       </div>
     </section>

@@ -1,66 +1,59 @@
 import { NextResponse } from 'next/server';
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/server';
+import { buildRefillItems, createGoogleTask, getValidGoogleAccessToken } from '@/lib/google-tasks';
 
-/**
- * Google Tasks API Sync Endpoint
- * Accepts refill items and target stock days, formats tasks payload,
- * and makes OAuth 2.0 REST API calls to Google Tasks API:
- * POST https://tasks.googleapis.com/tasks/v1/lists/@default/tasks
- */
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { targetDaysSupply = 30, refillItems = [] } = body;
+    const { targetDaysSupply = 30, refillItems: clientItems = [] } = body;
 
-    const googleAccessToken = process.env.GOOGLE_ACCESS_TOKEN;
+    let accessToken: string | null = process.env.GOOGLE_ACCESS_TOKEN ?? null;
+    let userId: string | undefined;
 
-    if (!googleAccessToken) {
-      // Return simulated success response with clear instruction when OAuth token is not configured in env
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        userId = user.id;
+        accessToken = await getValidGoogleAccessToken(user.id);
+      }
+    }
+
+    const items = clientItems.length > 0 ? clientItems : [];
+
+    if (!accessToken) {
       return NextResponse.json({
         success: true,
         mode: 'simulation',
-        message: 'Refill tasks calculated and formatted. Google Tasks API is ready. (Add GOOGLE_ACCESS_TOKEN to .env for direct live REST sync).',
-        tasksCreated: refillItems.map((item: any) => ({
-          title: `Refill ${item.medicationName} for ${item.patientName} (${item.refillQuantityNeeded} pills)`,
-          notes: `Current Stock: ${item.currentStock} pills. Days Remaining: ${item.daysLeft}. Target: ${targetDaysSupply} days supply. Depletion Date: ${item.depletionDate}`,
-          dueDate: item.depletionDate
-        }))
+        message: 'Connect Google account or set GOOGLE_ACCESS_TOKEN for live sync.',
+        tasksCreated: items.map((item: { medicationName: string; patientName: string; refillQuantityNeeded: number; currentStock: number; daysLeft: number; depletionDate: string }) => ({
+          title: `Refill ${item.medicationName} for ${item.patientName}`,
+          notes: `${item.refillQuantityNeeded} pills needed. ${item.daysLeft} days left.`,
+          dueDate: item.depletionDate,
+        })),
       });
     }
 
-    // Call live Google Tasks API
-    const googleTaskResults = [];
-    for (const item of refillItems) {
-      const taskPayload = {
-        title: `💊 Refill: ${item.medicationName} (${item.patientName})`,
-        notes: `MedTrack Auto-Refill Alert: Need ${item.refillQuantityNeeded} pills to achieve ${targetDaysSupply}-day supply. Est. Depletion: ${item.depletionDate}.`,
-        due: `${item.depletionDate}T09:00:00.000Z`
-      };
-
-      const response = await fetch('https://tasks.googleapis.com/tasks/v1/lists/@default/tasks', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${googleAccessToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(taskPayload)
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        googleTaskResults.push(result);
-      }
+    const results = [];
+    for (const item of items) {
+      const result = await createGoogleTask(
+        accessToken,
+        `💊 Refill: ${item.medicationName} (${item.patientName})`,
+        `Need ${item.refillQuantityNeeded} pills for ${targetDaysSupply}-day supply. Depletion: ${item.depletionDate}.`,
+        item.depletionDate
+      );
+      if (result) results.push(result);
     }
 
     return NextResponse.json({
       success: true,
       mode: 'live',
-      syncedCount: googleTaskResults.length,
-      tasks: googleTaskResults
+      syncedCount: results.length,
+      userId,
+      tasks: results,
     });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

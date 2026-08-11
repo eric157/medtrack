@@ -1,29 +1,27 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, HeartHandshake } from 'lucide-react';
-import { useMedTrackStore } from '@/lib/store';
-import { calculateDepletionForecast } from '@/lib/forecasting';
+import { LayoutDashboard, HeartHandshake, LogOut } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { InstallGuideLink } from '@/components/InstallPrompt';
+import { useMedications, usePatients } from '@/lib/queries/use-medtrack';
+import { calculateDepletionForecast } from '@/lib/forecasting';
+import { signOutAction } from '@/lib/actions/medtrack-actions';
+import { Button } from '@/components/ui/button';
 
 export function Navigation() {
   const pathname = usePathname();
-  const { medications, patients, loadState, isLoaded } = useMedTrackStore();
-
-  useEffect(() => {
-    if (!isLoaded) {
-      loadState();
-    }
-  }, [isLoaded, loadState]);
+  const { data: medications = [] } = useMedications();
+  const { data: patients = [] } = usePatients();
 
   const lowStockCount = medications.filter(med => {
     const patient = patients.find(p => p.id === med.patient_id);
-    const forecast = calculateDepletionForecast(med, patient ? patient.name : '');
-    return forecast.isLowStock;
+    return calculateDepletionForecast(med, patient?.name ?? '').isLowStock;
   }).length;
+
+  const isDashboard = pathname.startsWith('/dashboard');
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 shadow-sm">
@@ -49,7 +47,7 @@ export function Navigation() {
             <Link
               href="/dashboard"
               className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl font-bold transition-all ${
-                pathname.startsWith('/dashboard')
+                isDashboard
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/25 scale-[1.02]'
                   : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
@@ -57,13 +55,20 @@ export function Navigation() {
               <LayoutDashboard className="w-5 h-5" />
               <span className="text-base sm:text-lg hidden sm:inline">Caregiver Dashboard</span>
               <span className="sm:hidden">Dashboard</span>
-
               {lowStockCount > 0 && (
                 <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-black bg-rose-500 text-white rounded-full animate-pulse">
                   {lowStockCount}
                 </span>
               )}
             </Link>
+
+          {isDashboard && (
+            <form action={signOutAction}>
+              <Button variant="ghost" size="sm" type="submit" title="Sign out">
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </form>
+          )}
 
             <div className="hidden sm:block pl-1 border-l border-slate-200 dark:border-slate-700">
               <InstallGuideLink />

@@ -2,275 +2,167 @@
 
 export const dynamic = 'force-dynamic';
 
-import React, { useEffect, useState } from 'react';
-import { useMedTrackStore } from '@/lib/store';
+import React, { useState } from 'react';
+import { usePatients, useMedications, useDoseLogs } from '@/lib/queries/use-medtrack';
 import { calculateDepletionForecast } from '@/lib/forecasting';
 import { Medication } from '@/lib/types';
 import { ComplianceFeed } from '@/components/dashboard/ComplianceFeed';
 import { InventoryOverview } from '@/components/dashboard/InventoryOverview';
 import { RefillPlannerModal } from '@/components/dashboard/RefillPlannerModal';
 import { AddEditMedicationModal } from '@/components/dashboard/AddEditMedicationModal';
+import { PushNotificationToggle } from '@/components/PushNotificationToggle';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 import {
-  LayoutDashboard,
-  Plus,
-  ShoppingCart,
-  AlertTriangle,
-  CheckCircle2,
-  Package,
-  Users,
-  Filter
+  LayoutDashboard, Plus, ShoppingCart, AlertTriangle, CheckCircle2, Package, Users, Filter,
 } from 'lucide-react';
 
 export default function CaregiverDashboardPage() {
-  const {
-    patients,
-    medications,
-    doseLogs,
-    loadState,
-    isLoaded
-  } = useMedTrackStore();
+  const { data: patients = [], isLoading: loadingPatients } = usePatients();
+  const { data: medications = [], isLoading: loadingMeds } = useMedications();
+  const { data: doseLogs = [] } = useDoseLogs();
 
-  const [mounted, setMounted] = useState(false);
   const [selectedPatientFilter, setSelectedPatientFilter] = useState<string>('all');
   const [isRefillModalOpen, setIsRefillModalOpen] = useState(false);
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
   const [medicationToEdit, setMedicationToEdit] = useState<Medication | null>(null);
 
-  useEffect(() => {
-    setMounted(true);
-    if (!isLoaded) {
-      loadState();
-    }
-  }, [isLoaded, loadState]);
-
-  if (!mounted) {
+  if (loadingPatients || loadingMeds) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-8">
         <div className="text-xl font-bold text-slate-600 dark:text-slate-300 animate-pulse">
-          Loading Caregiver Control Dashboard...
+          Loading from Supabase...
         </div>
       </div>
     );
   }
 
-  // Filtered medications
   const filteredMeds = selectedPatientFilter === 'all'
     ? medications.filter(m => m.is_active)
     : medications.filter(m => m.patient_id === selectedPatientFilter && m.is_active);
 
-  // Stats calculation
   const lowStockItems = medications.filter(med => {
     const patient = patients.find(p => p.id === med.patient_id);
-    const forecast = calculateDepletionForecast(med, patient ? patient.name : '');
-    return forecast.isLowStock;
+    return calculateDepletionForecast(med, patient?.name ?? '').isLowStock;
   });
 
   const todayStr = new Date().toISOString().split('T')[0];
   const todayLogs = doseLogs.filter(log => log.logged_at.startsWith(todayStr));
   const dosesTakenToday = todayLogs.filter(l => l.status === 'taken').length;
-
   const totalDailyScheduled = medications.filter(m => m.is_active).length;
   const compliancePercent = totalDailyScheduled > 0
     ? Math.min(100, Math.round((dosesTakenToday / totalDailyScheduled) * 100))
     : 100;
 
-  const handleOpenEdit = (med: Medication) => {
-    setMedicationToEdit(med);
-    setIsAddEditModalOpen(true);
-  };
-
-  const handleOpenAdd = () => {
-    setMedicationToEdit(null);
-    setIsAddEditModalOpen(true);
-  };
-
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-16">
-      {/* Header Banner */}
       <div className="bg-slate-900 text-white border-b-4 border-indigo-600 py-8 px-4 sm:px-8 shadow-md">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-1">
             <div className="inline-flex items-center space-x-2 text-indigo-400 font-extrabold text-xs uppercase tracking-widest">
               <LayoutDashboard className="w-4 h-4" />
               <span>Primary Caregiver Control Center</span>
+              <Badge variant="secondary" className="text-[10px]">Live Sync</Badge>
             </div>
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
               Medication & Refill Dashboard
             </h1>
             <p className="text-slate-300 text-sm">
-              Real-time monitoring, stock depletion forecasting & Google Tasks refill automation.
+              Supabase Realtime · Google Tasks · Web Push alerts
             </p>
           </div>
 
-          {/* Quick Action Buttons */}
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={() => setIsRefillModalOpen(true)}
-              className="flex items-center space-x-2 px-5 py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl text-sm transition-transform shadow-lg shadow-amber-500/25 active:scale-95"
-            >
-              <ShoppingCart className="w-5 h-5" />
-              <span>30-Day Refill Planner</span>
+            <PushNotificationToggle />
+            <Button asChild variant="outline" size="sm" className="bg-white/10 border-white/20 text-white hover:bg-white/20">
+              <Link href="/api/auth/google">Connect Google Tasks</Link>
+            </Button>
+            <Button onClick={() => setIsRefillModalOpen(true)} className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black">
+              <ShoppingCart className="w-4 h-4 mr-2" />
+              30-Day Refill
               {lowStockItems.length > 0 && (
-                <span className="ml-1.5 px-2 py-0.5 bg-slate-950 text-amber-400 text-xs font-black rounded-full">
+                <span className="ml-2 px-2 py-0.5 bg-slate-950 text-amber-400 text-xs font-black rounded-full">
                   {lowStockItems.length}
                 </span>
               )}
-            </button>
-
-            <button
-              onClick={handleOpenAdd}
-              className="flex items-center space-x-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold rounded-xl text-sm transition-transform shadow-lg shadow-indigo-600/30 active:scale-95"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Add Medication</span>
-            </button>
+            </Button>
+            <Button onClick={() => { setMedicationToEdit(null); setIsAddEditModalOpen(true); }} className="bg-indigo-600 hover:bg-indigo-500 font-extrabold">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Medication
+            </Button>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 space-y-8">
-        {/* KPI Metrics Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {/* Card 1: Total Tracked */}
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
+          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">
-                Total Medications
-              </p>
-              <h3 className="text-3xl font-black text-slate-900 dark:text-white mt-1">
-                {medications.length}
-              </h3>
-              <p className="text-xs text-slate-400 mt-1">Across 2 Patient Profiles</p>
+              <p className="text-xs font-extrabold text-slate-500 uppercase">Total Medications</p>
+              <h3 className="text-3xl font-black mt-1">{medications.length}</h3>
             </div>
-            <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-              <Package className="w-7 h-7" />
-            </div>
+            <Package className="w-7 h-7 text-indigo-500" />
           </div>
-
-          {/* Card 2: Low Stock Alerts */}
-          <div className={`p-5 rounded-2xl border shadow-sm flex items-center justify-between transition-colors ${
-            lowStockItems.length > 0
-              ? 'bg-amber-50/80 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800'
-              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
-          }`}>
+          <div className={`p-5 rounded-2xl border shadow-sm flex items-center justify-between ${lowStockItems.length > 0 ? 'bg-amber-50 border-amber-300' : 'bg-white dark:bg-slate-900'}`}>
             <div>
-              <p className="text-xs font-extrabold text-amber-700 dark:text-amber-400 uppercase tracking-wider">
-                Low Stock Alerts
-              </p>
-              <h3 className="text-3xl font-black text-amber-600 dark:text-amber-300 mt-1">
-                {lowStockItems.length}
-              </h3>
-              <p className="text-xs text-slate-500 mt-1">
-                {lowStockItems.length > 0 ? 'Requires Refill Soon' : 'All Stocks Healthy'}
-              </p>
+              <p className="text-xs font-extrabold text-amber-700 uppercase">Low Stock</p>
+              <h3 className="text-3xl font-black text-amber-600 mt-1">{lowStockItems.length}</h3>
             </div>
-            <div className="p-3 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-              <AlertTriangle className="w-7 h-7" />
-            </div>
+            <AlertTriangle className="w-7 h-7 text-amber-500" />
           </div>
-
-          {/* Card 3: Today's Completed Doses */}
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
+          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">
-                Doses Taken Today
-              </p>
-              <h3 className="text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
-                {dosesTakenToday}
-              </h3>
-              <p className="text-xs text-slate-400 mt-1">Recorded via Parent Kiosk</p>
+              <p className="text-xs font-extrabold text-slate-500 uppercase">Doses Today</p>
+              <h3 className="text-3xl font-black text-emerald-600 mt-1">{dosesTakenToday}</h3>
             </div>
-            <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              <CheckCircle2 className="w-7 h-7" />
-            </div>
+            <CheckCircle2 className="w-7 h-7 text-emerald-500" />
           </div>
-
-          {/* Card 4: Daily Compliance % */}
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
+          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">
-                Daily Compliance
-              </p>
-              <h3 className="text-3xl font-black text-slate-900 dark:text-white mt-1">
-                {compliancePercent}%
-              </h3>
-              <p className="text-xs text-slate-400 mt-1">Based on daily frequency</p>
+              <p className="text-xs font-extrabold text-slate-500 uppercase">Compliance</p>
+              <h3 className="text-3xl font-black mt-1">{compliancePercent}%</h3>
             </div>
-            <div className="p-3 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-              <Users className="w-7 h-7" />
-            </div>
+            <Users className="w-7 h-7 text-blue-500" />
           </div>
         </div>
 
-        {/* Patient Filter Tabs */}
-        <div className="flex items-center justify-between border-b pb-3 border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between border-b pb-3">
           <div className="flex items-center space-x-2">
             <Filter className="w-4 h-4 text-slate-500" />
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">
-              Filter Patient:
-            </span>
+            <span className="text-xs font-bold text-slate-500 uppercase">Filter Patient</span>
           </div>
-
           <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setSelectedPatientFilter('all')}
-              className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-colors ${
-                selectedPatientFilter === 'all'
-                  ? 'bg-indigo-600 text-white shadow-md'
-                  : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-100'
-              }`}
-            >
-              All Patients ({medications.length})
-            </button>
-
-            {patients.map(p => (
+            {['all', ...patients.map(p => p.id)].map(id => (
               <button
-                key={p.id}
-                onClick={() => setSelectedPatientFilter(p.id)}
+                key={id}
+                onClick={() => setSelectedPatientFilter(id)}
                 className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-colors ${
-                  selectedPatientFilter === p.id
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-100'
+                  selectedPatientFilter === id ? 'bg-indigo-600 text-white' : 'bg-white border hover:bg-slate-100'
                 }`}
               >
-                {p.name} ({medications.filter(m => m.patient_id === p.id).length})
+                {id === 'all' ? 'All' : patients.find(p => p.id === id)?.name}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Dashboard Grid: Live Feed & Inventory */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column: Live Compliance Feed (1 col) */}
           <div className="lg:col-span-1">
             <ComplianceFeed doseLogs={doseLogs} />
           </div>
-
-          {/* Right Column: Smart Inventory Overview (2 cols) */}
           <div className="lg:col-span-2">
             <InventoryOverview
               medications={filteredMeds}
               patients={patients}
-              onEditMedication={handleOpenEdit}
+              onEditMedication={med => { setMedicationToEdit(med); setIsAddEditModalOpen(true); }}
             />
           </div>
         </div>
       </div>
 
-      {/* Modals */}
-      <RefillPlannerModal
-        isOpen={isRefillModalOpen}
-        onClose={() => setIsRefillModalOpen(false)}
-        medications={medications}
-        patients={patients}
-      />
-
-      <AddEditMedicationModal
-        isOpen={isAddEditModalOpen}
-        onClose={() => setIsAddEditModalOpen(false)}
-        medicationToEdit={medicationToEdit}
-        patients={patients}
-      />
+      <RefillPlannerModal isOpen={isRefillModalOpen} onClose={() => setIsRefillModalOpen(false)} medications={medications} patients={patients} />
+      <AddEditMedicationModal isOpen={isAddEditModalOpen} onClose={() => setIsAddEditModalOpen(false)} medicationToEdit={medicationToEdit} patients={patients} />
     </div>
   );
 }
