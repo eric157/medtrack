@@ -3,6 +3,11 @@
 import React from 'react';
 import { Medication, Patient } from '@/lib/types';
 import { calculateDepletionForecast, formatDaysRemainingText } from '@/lib/forecasting';
+import {
+  groupMedicationsForInventory,
+  getSharedStock,
+  formatMedicationSchedule,
+} from '@/lib/group-medications';
 import { useUpdateStock, useDeleteMedication } from '@/lib/queries/use-medtrack';
 import { Package, AlertTriangle, Plus, Minus, Edit3, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,9 +21,16 @@ interface InventoryOverviewProps {
 export function InventoryOverview({ medications, patients, onEditMedication }: InventoryOverviewProps) {
   const updateStock = useUpdateStock();
   const deleteMed = useDeleteMedication();
+  const inventoryGroups = groupMedicationsForInventory(medications);
 
-  const handleStockChange = (medId: string, currentStock: number, delta: number) => {
-    updateStock.mutate({ id: medId, stock: Math.max(0, currentStock + delta) });
+  const handleStockChange = (primaryId: string, currentStock: number, delta: number) => {
+    updateStock.mutate({ id: primaryId, stock: Math.max(0, currentStock + delta) });
+  };
+
+  const handleDeleteGroup = (entries: Medication[]) => {
+    for (const entry of entries) {
+      deleteMed.mutate(entry.id);
+    }
   };
 
   return (
@@ -27,29 +39,36 @@ export function InventoryOverview({ medications, patients, onEditMedication }: I
         <Package className="w-6 h-6 text-indigo-500" />
         <div>
           <h2 className="text-xl font-extrabold">Smart Inventory Dashboard</h2>
-          <p className="text-xs text-muted-foreground">Live from Supabase · auto-updates on dose logs</p>
+          <p className="text-xs text-muted-foreground">
+            One card per medication · multi-dose schedules share the same bottle
+          </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {medications.map(med => {
-          const patient = patients.find(p => p.id === med.patient_id);
-          const forecast = calculateDepletionForecast(med, patient?.name ?? 'Unknown');
-          const stockPercent = Math.min(100, Math.round((med.current_stock / Math.max(1, med.pack_size)) * 100));
+        {inventoryGroups.map(group => {
+          const patient = patients.find(p => p.id === group.patient_id);
+          const stock = getSharedStock(group.entries);
+          const forecastMed = { ...group.primary, current_stock: stock };
+          const forecast = calculateDepletionForecast(forecastMed, patient?.name ?? 'Unknown');
+          const stockPercent = Math.min(100, Math.round((stock / Math.max(1, group.primary.pack_size)) * 100));
+          const groupKey = `${group.patient_id}|${group.name}`;
 
           return (
-            <div key={med.id} className={`p-5 rounded-2xl border space-y-4 ${forecast.isLowStock ? 'border-amber-300 bg-amber-50/30' : ''}`}>
+            <div key={groupKey} className={`p-5 rounded-2xl border space-y-4 ${forecast.isLowStock ? 'border-amber-300 bg-amber-50/30' : ''}`}>
               <div className="flex items-start justify-between">
                 <div>
-                  <span className="font-black text-lg">{med.name}</span>
-                  <p className="text-xs text-muted-foreground">{patient?.name} · {med.time_of_day}</p>
+                  <span className="font-black text-lg">{group.name}</span>
+                  <p className="text-xs text-muted-foreground">
+                    {patient?.name} · {formatMedicationSchedule(group.timeSlots)}
+                  </p>
                 </div>
                 {forecast.isLowStock && <AlertTriangle className="w-5 h-5 text-amber-500" />}
               </div>
 
               <div className="space-y-1">
                 <div className="flex justify-between text-xs font-bold">
-                  <span>{med.current_stock} pills</span>
+                  <span>{stock} pills</span>
                   <span>{formatDaysRemainingText(forecast.daysLeft)}</span>
                 </div>
                 <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
@@ -60,12 +79,12 @@ export function InventoryOverview({ medications, patients, onEditMedication }: I
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-1">
-                  <Button variant="outline" size="icon" onClick={() => handleStockChange(med.id, med.current_stock, -1)}><Minus className="w-4 h-4" /></Button>
-                  <Button variant="outline" size="icon" onClick={() => handleStockChange(med.id, med.current_stock, 1)}><Plus className="w-4 h-4" /></Button>
+                  <Button variant="outline" size="icon" onClick={() => handleStockChange(group.primary.id, stock, -1)}><Minus className="w-4 h-4" /></Button>
+                  <Button variant="outline" size="icon" onClick={() => handleStockChange(group.primary.id, stock, 1)}><Plus className="w-4 h-4" /></Button>
                 </div>
                 <div className="flex items-center space-x-1">
-                  <Button variant="ghost" size="icon" onClick={() => onEditMedication(med)}><Edit3 className="w-4 h-4" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => deleteMed.mutate(med.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => onEditMedication(group.primary)}><Edit3 className="w-4 h-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleDeleteGroup(group.entries)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
                 </div>
               </div>
             </div>

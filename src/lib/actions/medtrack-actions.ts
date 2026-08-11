@@ -15,6 +15,20 @@ async function getSupabaseOrFallback() {
   return createClient();
 }
 
+/** Multi-dose meds share one bottle — keep stock in sync across schedule rows. */
+async function syncStockAcrossScheduleSlots(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  patientId: string,
+  name: string,
+  stock: number,
+) {
+  await supabase
+    .from('medications')
+    .update({ current_stock: Math.max(0, stock), updated_at: new Date().toISOString() })
+    .eq('patient_id', patientId)
+    .eq('name', name);
+}
+
 export async function fetchPatients(): Promise<Patient[]> {
   const supabase = await getSupabaseOrFallback();
   if (!supabase) return SEED_PATIENTS;
@@ -121,10 +135,7 @@ export async function logDoseAction(
     if (updateError) return { success: false, error: updateError.message };
 
     const newStock = Math.max(0, med.current_stock - med.dosage_per_take);
-    await supabase
-      .from('medications')
-      .update({ current_stock: newStock, updated_at: new Date().toISOString() })
-      .eq('id', medicationId);
+    await syncStockAcrossScheduleSlots(supabase, med.patient_id, med.name, newStock);
   } else {
     const { error } = await supabase.from('dose_logs').insert({
       medication_id: medicationId,
@@ -137,6 +148,15 @@ export async function logDoseAction(
   }
 
   if (status === 'taken') {
+    const { data: updated } = await supabase
+      .from('medications')
+      .select('current_stock')
+      .eq('id', medicationId)
+      .single();
+    if (updated) {
+      await syncStockAcrossScheduleSlots(supabase, med.patient_id, med.name, updated.current_stock);
+    }
+
     await sendPushToAllCaregivers(
       '✅ Dose Logged',
       `${med.name ?? 'Medication'} marked taken via Parent Kiosk`,
@@ -159,13 +179,23 @@ export async function updateMedicationStockAction(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { success: false, error: 'Not authenticated' };
 
+  const { data: med } = await supabase
+    .from('medications')
+    .select('patient_id, name')
+    .eq('id', medicationId)
+    .single();
+
+  if (!med) return { success: false, error: 'Medication not found' };
+
   const { error } = await supabase
     .from('medications')
     .update({ current_stock: Math.max(0, newStock), updated_at: new Date().toISOString() })
-    .eq('id', medicationId);
+    .eq('patient_id', med.patient_id)
+    .eq('name', med.name);
 
   if (error) return { success: false, error: error.message };
   revalidatePath('/dashboard');
+  revalidatePath('/kiosk');
   return { success: true };
 }
 
@@ -197,6 +227,14 @@ export async function upsertMedicationAction(
     : await supabase.from('medications').insert(payload);
 
   if (error) return { success: false, error: error.message };
+
+  await syncStockAcrossScheduleSlots(
+    supabase,
+    medication.patient_id,
+    medication.name,
+    medication.current_stock,
+  );
+
   revalidatePath('/dashboard');
   revalidatePath('/kiosk');
   return { success: true };

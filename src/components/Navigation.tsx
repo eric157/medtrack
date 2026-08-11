@@ -8,6 +8,7 @@ import { Logo } from '@/components/Logo';
 import { InstallGuideLink } from '@/components/InstallPrompt';
 import { useMedications, usePatients } from '@/lib/queries/use-medtrack';
 import { calculateDepletionForecast } from '@/lib/forecasting';
+import { groupMedicationsForInventory, getSharedStock } from '@/lib/group-medications';
 import { signOutAction } from '@/lib/actions/medtrack-actions';
 import { Button } from '@/components/ui/button';
 
@@ -16,9 +17,10 @@ export function Navigation() {
   const { data: medications = [] } = useMedications();
   const { data: patients = [] } = usePatients();
 
-  const lowStockCount = medications.filter(med => {
-    const patient = patients.find(p => p.id === med.patient_id);
-    return calculateDepletionForecast(med, patient?.name ?? '').isLowStock;
+  const lowStockCount = groupMedicationsForInventory(medications.filter(m => m.is_active)).filter(group => {
+    const patient = patients.find(p => p.id === group.patient_id);
+    const stock = getSharedStock(group.entries);
+    return calculateDepletionForecast({ ...group.primary, current_stock: stock }, patient?.name ?? '').isLowStock;
   }).length;
 
   const isDashboard = pathname.startsWith('/dashboard');

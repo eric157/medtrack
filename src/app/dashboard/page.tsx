@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useMedtrackClock } from '@/lib/hooks/use-missed-dose-watcher';
 import { getMedtrackTimezone, getTodayKey, hasBlockEnded, isLogOnDate } from '@/lib/time-blocks';
+import { groupMedicationsForInventory, getSharedStock } from '@/lib/group-medications';
 
 export default function CaregiverDashboardPage() {
   useMedtrackClock();
@@ -46,9 +47,12 @@ export default function CaregiverDashboardPage() {
     ? medications.filter(m => m.is_active)
     : medications.filter(m => m.patient_id === selectedPatientFilter && m.is_active);
 
-  const lowStockItems = medications.filter(med => {
-    const patient = patients.find(p => p.id === med.patient_id);
-    return calculateDepletionForecast(med, patient?.name ?? '').isLowStock;
+  const inventoryGroups = groupMedicationsForInventory(medications.filter(m => m.is_active));
+
+  const lowStockItems = inventoryGroups.filter(group => {
+    const patient = patients.find(p => p.id === group.patient_id);
+    const stock = getSharedStock(group.entries);
+    return calculateDepletionForecast({ ...group.primary, current_stock: stock }, patient?.name ?? '').isLowStock;
   });
 
   const timeZone = getMedtrackTimezone();
@@ -111,8 +115,8 @@ export default function CaregiverDashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs font-extrabold text-slate-500 uppercase">Total Medications</p>
-              <h3 className="text-3xl font-black mt-1">{medications.length}</h3>
+              <p className="text-xs font-extrabold text-slate-500 uppercase">Medications</p>
+              <h3 className="text-3xl font-black mt-1">{inventoryGroups.length}</h3>
             </div>
             <Package className="w-7 h-7 text-indigo-500" />
           </div>
