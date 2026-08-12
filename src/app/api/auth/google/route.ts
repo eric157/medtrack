@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getSiteUrl } from '@/lib/site-url';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const siteUrl = getSiteUrl();

@@ -3,6 +3,8 @@ import { createAdminClient, isSupabaseConfigured } from '@/lib/supabase/server';
 import { authorizeCronRequest } from '@/lib/notifications/cron-auth';
 import { isValidTimeBlock, sendMedicationReminders } from '@/lib/notifications/reminders';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   const unauthorized = authorizeCronRequest(request);
   if (unauthorized) return unauthorized;

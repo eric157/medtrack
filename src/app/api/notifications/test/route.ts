@@ -7,6 +7,8 @@ import {
 import { sendSms } from '@/lib/notifications/sms';
 import { sendEmail } from '@/lib/notifications/email';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Diagnostic endpoint — sends one test SMS (Eric) and one test email (Eric).
  * GET /api/notifications/test?secret=YOUR_CRON_SECRET

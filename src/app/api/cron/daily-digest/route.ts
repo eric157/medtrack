@@ -7,6 +7,8 @@ import { buildCaregiverAlertSms } from '@/lib/notifications/messages';
 import { notifyCaregivers } from '@/lib/notifications/dispatch';
 import { getMedtrackTimezone, getTodayKey } from '@/lib/time-blocks';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   const unauthorized = authorizeCronRequest(request);
   if (unauthorized) return unauthorized;
