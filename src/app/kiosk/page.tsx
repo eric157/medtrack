@@ -7,7 +7,7 @@ import { usePatients, useMedications, useDoseLogs } from '@/lib/queries/use-medt
 import { TimeBlockSection } from '@/components/kiosk/TimeBlockSection';
 import { KioskPinGate } from '@/components/auth/KioskPinGate';
 import { User, ShieldCheck } from 'lucide-react';
-import { useMissedDoseWatcher, useMedtrackClock } from '@/lib/hooks/use-missed-dose-watcher';
+import { useAutoTakenWatcher, useMedtrackClock } from '@/lib/hooks/use-missed-dose-watcher';
 import {
   TIME_BLOCK_ORDER,
   getCurrentTimeBlock,
@@ -18,7 +18,7 @@ import {
 } from '@/lib/time-blocks';
 
 export default function ParentKioskPage() {
-  useMissedDoseWatcher();
+  useAutoTakenWatcher();
   useMedtrackClock();
 
   const { data: patients = [], isLoading: loadingPatients, isError: patientsError, error: patientsErr } = usePatients();

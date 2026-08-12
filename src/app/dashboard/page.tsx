@@ -8,29 +8,25 @@ import { calculateDepletionForecast } from '@/lib/forecasting';
 import { Medication } from '@/lib/types';
 import { ComplianceFeed } from '@/components/dashboard/ComplianceFeed';
 import { InventoryOverview } from '@/components/dashboard/InventoryOverview';
-import { RefillPlannerModal } from '@/components/dashboard/RefillPlannerModal';
 import { AddEditMedicationModal } from '@/components/dashboard/AddEditMedicationModal';
-import { PushNotificationToggle } from '@/components/PushNotificationToggle';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import Link from 'next/link';
 import {
-  LayoutDashboard, Plus, ShoppingCart, AlertTriangle, CheckCircle2, Package, Users, Filter,
+  LayoutDashboard, Plus, AlertTriangle, CheckCircle2, Package, Users, Filter,
 } from 'lucide-react';
-import { useMedtrackClock, useCaregiverMissedDoseWatcher } from '@/lib/hooks/use-missed-dose-watcher';
-import { getMedtrackTimezone, getTodayKey, hasBlockEnded, isLogOnDate } from '@/lib/time-blocks';
+import { useMedtrackClock, useCaregiverAutoTakenWatcher } from '@/lib/hooks/use-missed-dose-watcher';
+import { getMedtrackTimezone, getTodayKey, isLogOnDate } from '@/lib/time-blocks';
 import { groupMedicationsForInventory, getSharedStock } from '@/lib/group-medications';
 
 export default function CaregiverDashboardPage() {
   useMedtrackClock();
-  useCaregiverMissedDoseWatcher();
+  useCaregiverAutoTakenWatcher();
 
   const { data: patients = [], isLoading: loadingPatients } = usePatients();
   const { data: medications = [], isLoading: loadingMeds } = useMedications();
   const { data: doseLogs = [] } = useDoseLogs();
 
   const [selectedPatientFilter, setSelectedPatientFilter] = useState<string>('all');
-  const [isRefillModalOpen, setIsRefillModalOpen] = useState(false);
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
   const [medicationToEdit, setMedicationToEdit] = useState<Medication | null>(null);
 
@@ -61,12 +57,7 @@ export default function CaregiverDashboardPage() {
   const todayKey = getTodayKey(now, timeZone);
   const todayLogs = doseLogs.filter(log => isLogOnDate(log, todayKey, timeZone));
   const dosesTakenToday = todayLogs.filter(l => l.status === 'taken').length;
-  const dosesMissedToday = todayLogs.filter(l => l.status === 'missed').length
-    + medications.filter(med => {
-      if (!med.is_active) return false;
-      const log = todayLogs.find(l => l.medication_id === med.id);
-      return !log && hasBlockEnded(med.time_of_day, now, timeZone);
-    }).length;
+  const dosesMissedToday = todayLogs.filter(l => l.status === 'missed').length;
   const totalDailyScheduled = medications.filter(m => m.is_active).length;
   const compliancePercent = totalDailyScheduled > 0
     ? Math.min(100, Math.round((dosesTakenToday / totalDailyScheduled) * 100))
@@ -83,27 +74,14 @@ export default function CaregiverDashboardPage() {
               <Badge variant="secondary" className="text-[10px]">Live Sync</Badge>
             </div>
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
-              Medication & Refill Dashboard
+              Medication Dashboard
             </h1>
             <p className="text-slate-300 text-sm">
-              Supabase Realtime · Google Tasks · Web Push alerts
+              Supabase Realtime · Live compliance tracking
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <PushNotificationToggle />
-            <Button asChild variant="outline" size="sm" className="bg-white/10 border-white/20 text-white hover:bg-white/20">
-              <Link href="/api/auth/google">Connect Google Tasks</Link>
-            </Button>
-            <Button onClick={() => setIsRefillModalOpen(true)} className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black">
-              <ShoppingCart className="w-4 h-4 mr-2" />
-              30-Day Refill
-              {lowStockItems.length > 0 && (
-                <span className="ml-2 px-2 py-0.5 bg-slate-950 text-amber-400 text-xs font-black rounded-full">
-                  {lowStockItems.length}
-                </span>
-              )}
-            </Button>
             <Button onClick={() => { setMedicationToEdit(null); setIsAddEditModalOpen(true); }} className="bg-indigo-600 hover:bg-indigo-500 font-extrabold">
               <Plus className="w-4 h-4 mr-2" />
               Add Medication
@@ -181,7 +159,6 @@ export default function CaregiverDashboardPage() {
         </div>
       </div>
 
-      <RefillPlannerModal isOpen={isRefillModalOpen} onClose={() => setIsRefillModalOpen(false)} medications={medications} patients={patients} />
       <AddEditMedicationModal isOpen={isAddEditModalOpen} onClose={() => setIsAddEditModalOpen(false)} medicationToEdit={medicationToEdit} patients={patients} />
     </div>
   );

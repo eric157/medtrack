@@ -61,22 +61,37 @@ CREATE TABLE IF NOT EXISTS google_task_sync_log (
 
 -- 2. INDEXES
 CREATE INDEX IF NOT EXISTS idx_medications_patient ON medications(patient_id);
+CREATE INDEX IF NOT EXISTS idx_medications_active ON medications(patient_id, time_of_day) WHERE is_active = true;
 CREATE INDEX IF NOT EXISTS idx_dose_logs_patient ON dose_logs(patient_id);
 CREATE INDEX IF NOT EXISTS idx_dose_logs_medication ON dose_logs(medication_id);
 CREATE INDEX IF NOT EXISTS idx_dose_logs_logged_at ON dose_logs(logged_at DESC);
+CREATE INDEX IF NOT EXISTS idx_dose_logs_med_logged_at ON dose_logs(medication_id, logged_at DESC);
 CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(user_id);
 CREATE INDEX IF NOT EXISTS idx_google_task_sync_med ON google_task_sync_log(medication_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_user_integrations_user_provider ON user_integrations(user_id, provider);
 
--- 3. AUTO STOCK DECREMENT
+-- 3. AUTO STOCK DECREMENT (syncs shared stock across schedule slots)
 CREATE OR REPLACE FUNCTION decrement_stock_on_dose_taken()
 RETURNS TRIGGER AS $$
+DECLARE
+  med_name VARCHAR(100);
+  med_patient_id UUID;
+  med_dosage INT;
+  new_stock INT;
 BEGIN
   IF NEW.status = 'taken' THEN
+    SELECT m.name, m.patient_id, m.dosage_per_take, m.current_stock
+    INTO med_name, med_patient_id, med_dosage, new_stock
+    FROM medications m
+    WHERE m.id = NEW.medication_id;
+
+    new_stock := GREATEST(0, new_stock - med_dosage);
+
     UPDATE medications
-    SET current_stock = GREATEST(0, current_stock - dosage_per_take),
+    SET current_stock = new_stock,
         updated_at = NOW()
-    WHERE id = NEW.medication_id;
+    WHERE patient_id = med_patient_id
+      AND name = med_name;
   END IF;
   RETURN NEW;
 END;
@@ -86,6 +101,25 @@ DROP TRIGGER IF EXISTS trg_decrement_stock ON dose_logs;
 CREATE TRIGGER trg_decrement_stock
 AFTER INSERT ON dose_logs
 FOR EACH ROW EXECUTE FUNCTION decrement_stock_on_dose_taken();
+
+-- Status / time slot validation
+DO $$ BEGIN
+  ALTER TABLE dose_logs ADD CONSTRAINT dose_logs_status_check
+    CHECK (status IN ('taken', 'skipped', 'missed'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE medications ADD CONSTRAINT medications_time_of_day_check
+    CHECK (time_of_day IN ('morning', 'afternoon', 'evening', 'night'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE dose_logs ADD CONSTRAINT dose_logs_time_of_day_check
+    CHECK (scheduled_time_of_day IN ('morning', 'afternoon', 'evening', 'night'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- 4. ROW LEVEL SECURITY
 ALTER TABLE patients ENABLE ROW LEVEL SECURITY;

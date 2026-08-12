@@ -6,13 +6,13 @@ import {
   isLogOnDate,
 } from '@/lib/time-blocks';
 
-export interface MissedDoseResult {
+export interface AutoTakenDoseResult {
   recorded: number;
   names: string[];
 }
 
-/** Record missed dose logs for medications whose time window ended with no log today. */
-export async function processMissedDoses(admin: SupabaseClient): Promise<MissedDoseResult> {
+/** Auto-mark doses as taken when the time window ends without a manual log. */
+export async function processAutoTakenDoses(admin: SupabaseClient): Promise<AutoTakenDoseResult> {
   const timeZone = getMedtrackTimezone();
   const now = new Date();
   const todayKey = getTodayKey(now, timeZone);
@@ -48,7 +48,7 @@ export async function processMissedDoses(admin: SupabaseClient): Promise<MissedD
       medication_id: med.id,
       patient_id: med.patient_id,
       scheduled_time_of_day: med.time_of_day,
-      status: 'missed',
+      status: 'taken',
     });
 
     if (!error) {

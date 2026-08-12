@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getKioskPin } from '@/components/auth/KioskPinGate';
-import { processMissedDosesAction } from '@/lib/actions/missed-dose-actions';
+import { processAutoTakenDosesAction } from '@/lib/actions/auto-taken-dose-actions';
 
 /** Re-render kiosk UI as time windows change (every minute). */
 export function useClockTick(intervalMs = 60_000) {
@@ -14,14 +14,14 @@ export function useClockTick(intervalMs = 60_000) {
   }, [intervalMs]);
 }
 
-/** Record missed doses while kiosk is open (every 2 min). */
-export function useMissedDoseWatcher() {
+/** Auto-mark past-due doses as taken while kiosk is open (every 2 min). */
+export function useAutoTakenWatcher() {
   useClockTick(60_000);
 
   useEffect(() => {
     const run = () => {
       const pin = getKioskPin();
-      if (pin) processMissedDosesAction(pin);
+      if (pin) processAutoTakenDosesAction(pin);
     };
 
     run();
@@ -30,12 +30,12 @@ export function useMissedDoseWatcher() {
   }, []);
 }
 
-/** Record missed doses while caregiver dashboard is open (every 5 min). */
-export function useCaregiverMissedDoseWatcher() {
+/** Auto-mark past-due doses as taken while caregiver dashboard is open (every 5 min). */
+export function useCaregiverAutoTakenWatcher() {
   useClockTick(60_000);
 
   useEffect(() => {
-    const run = () => processMissedDosesAction();
+    const run = () => processAutoTakenDosesAction();
     run();
     const id = setInterval(run, 5 * 60_000);
     return () => clearInterval(id);

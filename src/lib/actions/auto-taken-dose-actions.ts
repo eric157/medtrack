@@ -2,14 +2,13 @@
 
 import { revalidatePath } from 'next/cache';
 import { createAdminClient, createClient, isSupabaseConfigured } from '@/lib/supabase/server';
-import { processMissedDoses } from '@/lib/missed-doses';
-import { sendPushToAllCaregivers } from '@/lib/actions/push-actions';
+import { processAutoTakenDoses } from '@/lib/auto-taken-doses';
 
 function validateKioskPin(pin: string): boolean {
   return pin === (process.env.KIOSK_PIN || '1234');
 }
 
-export async function processMissedDosesAction(
+export async function processAutoTakenDosesAction(
   kioskPin?: string,
 ): Promise<{ success: boolean; recorded: number; names: string[]; error?: string }> {
   if (!isSupabaseConfigured()) {
@@ -29,19 +28,9 @@ export async function processMissedDosesAction(
   }
 
   const admin = createAdminClient();
-  const result = await processMissedDoses(admin);
+  const result = await processAutoTakenDoses(admin);
 
   if (result.recorded > 0) {
-    const label = result.names.length <= 3
-      ? result.names.join(', ')
-      : `${result.names.slice(0, 3).join(', ')} +${result.names.length - 3} more`;
-
-    await sendPushToAllCaregivers(
-      '⚠️ Missed Dose Alert',
-      `${result.recorded} medication(s) not marked taken: ${label}`,
-      '/dashboard',
-    );
-
     revalidatePath('/kiosk');
     revalidatePath('/dashboard');
   }

@@ -133,7 +133,6 @@ export function getTimeBlockProgress(
     );
     if (log?.status === 'taken') taken++;
     else if (log?.status === 'missed') missed++;
-    else if (!log && hasBlockEnded(timeBlock, now, timeZone)) missed++;
   }
 
   return { taken, missed, total: blockMeds.length };
