@@ -3,6 +3,9 @@
 import { revalidatePath } from 'next/cache';
 import { createAdminClient, createClient, isSupabaseConfigured } from '@/lib/supabase/server';
 import { processAutoTakenDoses } from '@/lib/auto-taken-doses';
+import { notifyCaregivers } from '@/lib/notifications/dispatch';
+import { buildCaregiverAlertSms } from '@/lib/notifications/messages';
+import { getMedtrackTimezone, getTodayKey } from '@/lib/time-blocks';
 
 function validateKioskPin(pin: string): boolean {
   return pin === (process.env.KIOSK_PIN || '1234');
@@ -31,6 +34,21 @@ export async function processAutoTakenDosesAction(
   const result = await processAutoTakenDoses(admin);
 
   if (result.recorded > 0) {
+    const todayKey = getTodayKey(new Date(), getMedtrackTimezone());
+    const label = result.names.length <= 4
+      ? result.names.join(', ')
+      : `${result.names.slice(0, 4).join(', ')} +${result.names.length - 4} more`;
+
+    await notifyCaregivers(
+      admin,
+      'auto_taken',
+      `${todayKey}-auto-taken-${result.names.sort().join('-')}`,
+      buildCaregiverAlertSms(
+        'Auto-marked doses',
+        `${result.recorded} medication(s) marked taken: ${label}`,
+      ),
+    );
+
     revalidatePath('/kiosk');
     revalidatePath('/dashboard');
   }

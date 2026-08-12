@@ -1,8 +1,8 @@
 {
   "crons": [
     {
-      "path": "/api/cron/auto-taken-doses",
-      "schedule": "0 5 * * *"
+      "path": "/api/cron/daily-digest",
+      "schedule": "0 18 * * *"
     }
   ]
 }
