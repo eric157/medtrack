@@ -1,0 +1,73 @@
+{
+  "timezone": "Asia/Kolkata",
+  "method": "GET",
+  "siteUrlEnv": "NEXT_PUBLIC_SITE_URL",
+  "defaultSiteUrl": "https://medtrack-flame.vercel.app",
+  "jobs": [
+    {
+      "title": "MedTrack — Low Stock Check",
+      "schedule": "0 8 * * *",
+      "scheduleLabel": "Daily 8:00 AM IST",
+      "path": "/api/cron/low-stock"
+    },
+    {
+      "title": "MedTrack — Morning Reminder",
+      "schedule": "0 7 * * *",
+      "scheduleLabel": "Daily 7:00 AM IST",
+      "path": "/api/cron/reminders?block=morning"
+    },
+    {
+      "title": "MedTrack — Morning Auto-Taken",
+      "schedule": "5 11 * * *",
+      "scheduleLabel": "Daily 11:05 AM IST",
+      "path": "/api/cron/auto-taken-doses",
+      "note": "After morning window ends (11 AM)"
+    },
+    {
+      "title": "MedTrack — Afternoon Reminder",
+      "schedule": "0 12 * * *",
+      "scheduleLabel": "Daily 12:00 PM IST",
+      "path": "/api/cron/reminders?block=afternoon"
+    },
+    {
+      "title": "MedTrack — Afternoon Auto-Taken",
+      "schedule": "5 15 * * *",
+      "scheduleLabel": "Daily 3:05 PM IST",
+      "path": "/api/cron/auto-taken-doses",
+      "note": "After afternoon window ends (3 PM)"
+    },
+    {
+      "title": "MedTrack — Evening Reminder",
+      "schedule": "0 17 * * *",
+      "scheduleLabel": "Daily 5:00 PM IST",
+      "path": "/api/cron/reminders?block=evening"
+    },
+    {
+      "title": "MedTrack — Evening Auto-Taken",
+      "schedule": "5 20 * * *",
+      "scheduleLabel": "Daily 8:05 PM IST",
+      "path": "/api/cron/auto-taken-doses",
+      "note": "After evening window ends (8 PM)"
+    },
+    {
+      "title": "MedTrack — Night Reminder",
+      "schedule": "0 21 * * *",
+      "scheduleLabel": "Daily 9:00 PM IST",
+      "path": "/api/cron/reminders?block=night"
+    },
+    {
+      "title": "MedTrack — Night Auto-Taken",
+      "schedule": "5 23 * * *",
+      "scheduleLabel": "Daily 11:05 PM IST",
+      "path": "/api/cron/auto-taken-doses",
+      "note": "After night window ends (11 PM)"
+    },
+    {
+      "title": "MedTrack — Daily Digest",
+      "schedule": "35 23 * * *",
+      "scheduleLabel": "Daily 11:35 PM IST",
+      "path": "/api/cron/daily-digest",
+      "note": "End-of-day email + SMS summary (backup to Vercel cron)"
+    }
+  ]
+}

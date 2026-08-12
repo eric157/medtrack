@@ -25,6 +25,7 @@ Add these in **Vercel → Project → Settings → Environment Variables** (and 
 | `NOTIFICATION_FROM_EMAIL` | `MedTrack <onboarding@resend.dev>` | Use Resend test sender until domain verified |
 | `CRON_SECRET` | Random string | Run `npm run setup` or any long random password |
 | `NEXT_PUBLIC_MEDTRACK_TIMEZONE` | `Asia/Kolkata` | Already set in `.env.example` |
+| `NEXT_PUBLIC_SITE_URL` | `https://medtrack-flame.vercel.app` | Your Vercel deployment URL |
 
 **Redeploy** Vercel after adding variables.
 
@@ -39,6 +40,8 @@ Add these in **Vercel → Project → Settings → Environment Variables** (and 
    - Connected to Wi‑Fi/mobile data
    - App running (disable battery optimization for SMSMobileAPI)
 4. Paste the API key into `SMSMOBILEAPI_KEY` in Vercel.
+
+**SMS delay is normal:** Messages usually arrive **30 seconds – 2 minutes** after the cron runs. SMSMobileAPI sends to your Android phone first, then your phone sends via the carrier.
 
 **Test SMS + email together** (recommended first):
 
@@ -76,24 +79,62 @@ Eric should get an email at `ericpeterthomas15@gmail.com` and both caregivers ge
 
 ## Step 5: Set up cron-job.org schedules (10 min)
 
-Go to [cron-job.org](https://console.cron-job.org) → **Create cronjob** for each row:
+### Quick way — print all URLs
 
-Replace `YOUR-SITE` and `YOUR_CRON_SECRET` with your values.
+In your project folder (uses `CRON_SECRET` from `.env.local`):
 
-| Title | Schedule (IST) | URL |
-|---|---|---|
-| MedTrack Morning Reminder | Daily 7:00 AM | `https://YOUR-SITE.vercel.app/api/cron/reminders?block=morning&secret=YOUR_CRON_SECRET` |
-| MedTrack Afternoon Reminder | Daily 12:00 PM | `https://YOUR-SITE.vercel.app/api/cron/reminders?block=afternoon&secret=YOUR_CRON_SECRET` |
-| MedTrack Evening Reminder | Daily 5:00 PM | `https://YOUR-SITE.vercel.app/api/cron/reminders?block=evening&secret=YOUR_CRON_SECRET` |
-| MedTrack Night Reminder | Daily 9:00 PM | `https://YOUR-SITE.vercel.app/api/cron/reminders?block=night&secret=YOUR_CRON_SECRET` |
-| MedTrack Low Stock Check | Daily 8:00 AM | `https://YOUR-SITE.vercel.app/api/cron/low-stock?secret=YOUR_CRON_SECRET` |
+```bash
+npm run cron:urls
+```
+
+Copy each URL into [cron-job.org](https://console.cron-job.org) → **Create cronjob**.
+
+### All 10 jobs (Asia/Kolkata)
+
+Replace `YOUR-SITE` and `YOUR_CRON_SECRET` with your Vercel values.
+
+| # | Title | Time (IST) | URL path |
+|---|---|---|---|
+| 1 | Low Stock Check | **8:00 AM** | `/api/cron/low-stock?secret=...` |
+| 2 | Morning Reminder → Peter & Leena | **7:00 AM** | `/api/cron/reminders?block=morning&secret=...` |
+| 3 | Morning Auto-Taken | **11:05 AM** | `/api/cron/auto-taken-doses?secret=...` |
+| 4 | Afternoon Reminder | **12:00 PM** | `/api/cron/reminders?block=afternoon&secret=...` |
+| 5 | Afternoon Auto-Taken | **3:05 PM** | `/api/cron/auto-taken-doses?secret=...` |
+| 6 | Evening Reminder | **5:00 PM** | `/api/cron/reminders?block=evening&secret=...` |
+| 7 | Evening Auto-Taken | **8:05 PM** | `/api/cron/auto-taken-doses?secret=...` |
+| 8 | Night Reminder | **9:00 PM** | `/api/cron/reminders?block=night&secret=...` |
+| 9 | Night Auto-Taken | **11:05 PM** | `/api/cron/auto-taken-doses?secret=...` |
+| 10 | Daily Digest (email + SMS) | **11:35 PM** | `/api/cron/daily-digest?secret=...` |
+
+Full URL format:
+
+```
+https://YOUR-SITE.vercel.app/api/cron/reminders?block=morning&secret=YOUR_CRON_SECRET
+```
 
 **cron-job.org settings for each job:**
 - Request method: **GET**
 - Timezone: **Asia/Kolkata**
 - Enable job: **ON**
 
-**Vercel cron (automatic, once/day):** runs `/api/cron/daily-digest` at 6:00 PM UTC (~11:30 PM IST) — end-of-day summary + auto-taken catch-up.
+**Vercel cron (automatic backup):** also runs `/api/cron/daily-digest` once daily at 6:00 PM UTC (~11:30 PM IST).
+
+---
+
+## Daily schedule at a glance (IST)
+
+```
+ 7:00 AM  ── Morning reminder SMS (Peter, Leena)
+ 8:00 AM  ── Low stock check → caregivers
+11:05 AM  ── Auto-mark morning doses + caregiver SMS
+12:00 PM  ── Afternoon reminder SMS
+ 3:05 PM  ── Auto-mark afternoon doses + caregiver SMS
+ 5:00 PM  ── Evening reminder SMS
+ 8:05 PM  ── Auto-mark evening doses + caregiver SMS
+ 9:00 PM  ── Night reminder SMS
+11:05 PM  ── Auto-mark night doses + caregiver SMS
+11:35 PM  ── Daily digest email (Eric) + SMS (Eric, Erron)
+```
 
 ---
 
@@ -117,11 +158,12 @@ Phone numbers and email are hardcoded in `src/lib/notifications/recipients.ts` (
 | **404 on test URL** | Notification code not deployed — push latest code to GitHub and wait for Vercel redeploy |
 | **`missingEnvVars` in JSON** | Add those keys in Vercel → Settings → Environment Variables → **Redeploy** |
 | No SMS received | Check Android app is running; verify `SMSMOBILEAPI_KEY`; hit `/api/notifications/test` |
-| `SMSMOBILEAPI_KEY not set` | Add key in Vercel env vars, redeploy (local `.env.local` alone is not enough for production URL) |
-| SMS API error in JSON | Keep SMSMobileAPI app open; phone needs network; check API key |
+| SMS slow (1–2 min) | Normal for SMSMobileAPI — message goes cloud → your phone → carrier |
+| `SMSMOBILEAPI_KEY not set` | Add key in Vercel env vars, redeploy |
+| SMS API error in JSON | Keep SMSMobileAPI app open; phone needs network |
 | No email | Check spam; hit `/api/notifications/test` for exact Resend error |
 | Resend 403 / validation | With `onboarding@resend.dev`, recipient must be the email on your Resend account |
-| 401 Unauthorized | Add `?secret=YOUR_CRON_SECRET` matching Vercel `CRON_SECRET` exactly |
+| 401 Unauthorized | `CRON_SECRET` in URL must match Vercel exactly |
 | `already sent (dedupe)` | Add `&force=1` to reminder URL for testing |
 | Wrong reminder time | Set cron-job.org timezone to **Asia/Kolkata** |
 | Duplicate SMS | `notification_log` table dedupes — run migration from Step 1 |
@@ -133,8 +175,9 @@ Phone numbers and email are hardcoded in `src/lib/notifications/recipients.ts` (
 | Route | Purpose |
 |---|---|
 | `/api/cron/reminders?block=morning\|afternoon\|evening\|night` | Patient medication reminders |
+| `/api/cron/auto-taken-doses` | Auto-mark past-due doses + caregiver SMS |
 | `/api/cron/low-stock` | Caregiver low-stock alert |
-| `/api/cron/daily-digest` | End-of-day summary + auto-taken |
-| `/api/cron/auto-taken-doses` | Auto-mark only (no digest) |
+| `/api/cron/daily-digest` | End-of-day summary + auto-taken catch-up |
+| `/api/notifications/test` | Test SMS + email in one request |
 
 All routes accept `Authorization: Bearer CRON_SECRET` or `?secret=CRON_SECRET`.
