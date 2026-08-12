@@ -77,39 +77,22 @@ Eric should get an email at `ericpeterthomas15@gmail.com` and both caregivers ge
 
 ---
 
-## Step 5: Set up cron-job.org schedules (10 min)
+## Step 5: Set up cron-job.org schedules (5 jobs)
 
-### Quick way — print all URLs
-
-In your project folder (uses `CRON_SECRET` from `.env.local`):
-
-```bash
-npm run cron:urls
-```
-
-Copy each URL into [cron-job.org](https://console.cron-job.org) → **Create cronjob**.
-
-### All 10 jobs (Asia/Kolkata)
-
-Replace `YOUR-SITE` and `YOUR_CRON_SECRET` with your Vercel values.
+You only need **5 cron jobs** on [cron-job.org](https://console.cron-job.org):
 
 | # | Title | Time (IST) | URL path |
 |---|---|---|---|
-| 1 | Low Stock Check | **8:00 AM** | `/api/cron/low-stock?secret=...` |
-| 2 | Morning Reminder → Peter & Leena | **7:00 AM** | `/api/cron/reminders?block=morning&secret=...` |
-| 3 | Morning Auto-Taken | **11:05 AM** | `/api/cron/auto-taken-doses?secret=...` |
-| 4 | Afternoon Reminder | **12:00 PM** | `/api/cron/reminders?block=afternoon&secret=...` |
-| 5 | Afternoon Auto-Taken | **3:05 PM** | `/api/cron/auto-taken-doses?secret=...` |
-| 6 | Evening Reminder | **5:00 PM** | `/api/cron/reminders?block=evening&secret=...` |
-| 7 | Evening Auto-Taken | **8:05 PM** | `/api/cron/auto-taken-doses?secret=...` |
-| 8 | Night Reminder | **9:00 PM** | `/api/cron/reminders?block=night&secret=...` |
-| 9 | Night Auto-Taken | **11:05 PM** | `/api/cron/auto-taken-doses?secret=...` |
-| 10 | Daily Digest (email + SMS) | **11:35 PM** | `/api/cron/daily-digest?secret=...` |
+| 1 | Morning Reminder → Peter & Leena | **7:00 AM** | `/api/cron/reminders?block=morning&secret=...` |
+| 2 | Afternoon Reminder | **12:00 PM** | `/api/cron/reminders?block=afternoon&secret=...` |
+| 3 | Evening Reminder | **5:00 PM** | `/api/cron/reminders?block=evening&secret=...` |
+| 4 | Night Reminder | **9:00 PM** | `/api/cron/reminders?block=night&secret=...` |
+| 5 | Low Stock Check → Eric & Erron | **8:00 AM** | `/api/cron/low-stock?secret=...` |
 
-Full URL format:
+### Print your URLs
 
-```
-https://YOUR-SITE.vercel.app/api/cron/reminders?block=morning&secret=YOUR_CRON_SECRET
+```bash
+npm run cron:urls
 ```
 
 **cron-job.org settings for each job:**
@@ -117,7 +100,7 @@ https://YOUR-SITE.vercel.app/api/cron/reminders?block=morning&secret=YOUR_CRON_S
 - Timezone: **Asia/Kolkata**
 - Enable job: **ON**
 
-**Vercel cron (automatic backup):** also runs `/api/cron/daily-digest` once daily at 6:00 PM UTC (~11:30 PM IST).
+**Vercel cron (automatic, once/day):** runs `/api/cron/daily-digest` at 6:00 PM UTC (~11:30 PM IST) for end-of-day summary. Auto-marking of doses still runs while the kiosk or dashboard is open — no extra cron jobs needed for that.
 
 ---
 
@@ -126,14 +109,10 @@ https://YOUR-SITE.vercel.app/api/cron/reminders?block=morning&secret=YOUR_CRON_S
 ```
  7:00 AM  ── Morning reminder SMS (Peter, Leena)
  8:00 AM  ── Low stock check → caregivers
-11:05 AM  ── Auto-mark morning doses + caregiver SMS
 12:00 PM  ── Afternoon reminder SMS
- 3:05 PM  ── Auto-mark afternoon doses + caregiver SMS
  5:00 PM  ── Evening reminder SMS
- 8:05 PM  ── Auto-mark evening doses + caregiver SMS
  9:00 PM  ── Night reminder SMS
-11:05 PM  ── Auto-mark night doses + caregiver SMS
-11:35 PM  ── Daily digest email (Eric) + SMS (Eric, Erron)
+11:30 PM  ── Daily digest via Vercel (Eric email + caregiver SMS)
 ```
 
 ---
